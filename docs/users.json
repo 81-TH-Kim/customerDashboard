@@ -12,6 +12,13 @@
       "salt": "D6CQzGEcYARg75aiOZc4GA==",
       "iv": "Q35q1I++nucodTVx",
       "wrapped": "rvHksP49kfN/Nkt+aALOS2uHO8Tum5nPaOG5YwJuAC1fTtUPYnCK8sjATuBtl0Aj"
+    },
+    "jangcs": {
+      "name": "장충식",
+      "role": "viewer",
+      "salt": "sTGT1M7d5iNQXuZJiB8BTw==",
+      "iv": "G0PTobjFC9VDgwS6",
+      "wrapped": "6FtYvh89tyCf3T/5CXHpuqqFe2g7jPj82XzkRdixBrrtApVLKjNP0jQUz/+EmPeg"
     }
   }
 }
