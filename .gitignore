@@ -1,0 +1,32 @@
+# 비밀정보 (절대 커밋 금지)
+.env
+secrets/
+
+# 로컬 전용 - 실 데이터
+# (공개 배포는 publish.bat 로만: data/live -> docs/data)
+data/live/
+_local/
+
+# 사내 문서
+*.xlsx
+*.xls
+*.docx
+*.doc
+_xlsx_dump*.txt
+
+# 데이터 부산물
+data/_backup/
+data/_schedule.log
+data/*.json.tmp
+
+# 파이썬 / 빌드 부산물
+__pycache__/
+*.pyc
+*.pyo
+*.tmp
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+
+# docs/data/*.json (공개 샘플) 은 커밋 대상이므로 무시하지 않음

@@ -1,0 +1,12 @@
+{
+  "_comment": "제휴채널 마스터 샘플. 최초 실행 시 data/channels.json 이 없으면 이 파일이 복사됩니다. code=메일 본문의 채널명(고정), name=화면 표시명, type=채널유형, use_yn=사용여부, display_yn=Dashboard/PDF 노출여부, sort=노출순서",
+  "updated_at": "2026-01-01T00:00:00+09:00",
+  "channels": [
+    { "code": "WEB",          "name": "홈페이지",   "type": "대내", "use_yn": "Y", "display_yn": "Y", "sort": 1 },
+    { "code": "CM",           "name": "인터넷보험", "type": "대내", "use_yn": "Y", "display_yn": "Y", "sort": 2 },
+    { "code": "MobileCenter", "name": "모바일센터", "type": "대내", "use_yn": "Y", "display_yn": "Y", "sort": 3 },
+    { "code": "PAYCO",        "name": "PAYCO",      "type": "대외", "use_yn": "Y", "display_yn": "Y", "sort": 4 },
+    { "code": "NAVER",        "name": "NAVER",      "type": "대외", "use_yn": "Y", "display_yn": "Y", "sort": 5 },
+    { "code": "PARTNER_A",    "name": "제휴사A",    "type": "대외", "use_yn": "Y", "display_yn": "Y", "sort": 6 }
+  ]
+}

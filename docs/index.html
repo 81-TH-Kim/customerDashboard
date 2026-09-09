@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>제휴 마케팅 고객 유입현황</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">ABL</span>
+    <span class="brand-name">
+      <strong>ABL생명</strong>
+      <em>제휴 마케팅 인사이트 · Partnership Inflow</em>
+    </span>
+  </div>
+  <div class="topbar-actions">
+    <button id="btn-refresh" title="데이터를 다시 불러옵니다">
+      <span aria-hidden="true">↻</span><span class="label-hide">새로고침</span>
+    </button>
+    <button id="btn-pdf" class="btn solid">제휴현황 PDF</button>
+    <a class="btn" href="admin.html">관리자</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="pagehead">
+    <h1>제휴 마케팅 고객 유입현황</h1>
+    <div class="meta-pills">
+      <span class="pill"><span class="dot"></span>데이터 기준일 <b id="m-latest">–</b></span>
+      <span class="pill">최종 수집 <b id="m-collected">–</b></span>
+      <span class="pill">누적 <b id="m-count">–</b>건</span>
+    </div>
+  </div>
+
+  <div id="banner" class="banner"></div>
+
+  <section class="filters" id="filters">
+    <div class="row">
+      <div class="field">
+        <label>조회 단위</label>
+        <div class="seg" id="gran">
+          <button data-g="day" class="on">일별</button>
+          <button data-g="month">월별</button>
+          <button data-g="year">년도별</button>
+        </div>
+      </div>
+
+      <div class="field range-block" data-mode="day">
+        <label>조회기간 (일자)</label>
+        <div class="range-inputs">
+          <input type="date" id="d-start" />
+          <span class="sep-dash">–</span>
+          <input type="date" id="d-end" />
+        </div>
+      </div>
+      <div class="field range-block" data-mode="month" hidden>
+        <label>조회기간 (월)</label>
+        <div class="range-inputs">
+          <input type="month" id="m-start" />
+          <span class="sep-dash">–</span>
+          <input type="month" id="m-end" />
+        </div>
+      </div>
+      <div class="field range-block" data-mode="year" hidden>
+        <label>조회기간 (년도)</label>
+        <div class="range-inputs">
+          <select id="y-start"></select>
+          <span class="sep-dash">–</span>
+          <select id="y-end"></select>
+        </div>
+      </div>
+
+      <div class="field" style="flex:1; min-width:180px">
+        <label>빠른 조회</label>
+        <div class="chipset" id="quick"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field" style="flex:1; min-width:260px">
+        <label>제휴채널 <span style="font-weight:500;text-transform:none;color:var(--ink-3)">— 미선택 시 전체</span></label>
+        <div class="chipset" id="f-channels"></div>
+      </div>
+    </div>
+    <div class="foot-row">
+      <span class="hint" id="filter-hint">전체 채널 · 전체 기간</span>
+      <div class="apply">
+        <button id="btn-reset">초기화</button>
+        <button id="btn-apply" class="primary">조회</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="kpis">
+    <div class="kpi">
+      <div class="k-top"><span class="k-label" id="k-today-label">금일 유입</span><span id="k-today-badge" class="pill" style="border:none;background:var(--bg-soft)"></span></div>
+      <div class="k-value" id="k-today">–</div>
+      <div class="k-sub" id="k-today-sub"></div>
+      <div class="k-spark" id="k-today-spark"></div>
+    </div>
+    <div class="kpi">
+      <div class="k-top"><span class="k-label">기간 누적 (보장분석 이용건)</span></div>
+      <div class="k-value" id="k-period">–</div>
+      <div class="k-sub" id="k-period-sub"></div>
+      <div class="k-spark" id="k-period-spark"></div>
+    </div>
+    <div class="kpi">
+      <div class="k-top"><span class="k-label" id="k-dod-label">전일 대비</span><span id="k-dod-chip"></span></div>
+      <div class="k-value delta" id="k-dod">–</div>
+      <div class="k-sub" id="k-dod-sub"></div>
+      <div class="k-spark" id="k-dod-spark"></div>
+    </div>
+    <div class="kpi">
+      <div class="k-top"><span class="k-label">활성 제휴채널</span></div>
+      <div class="k-value" id="k-active">–</div>
+      <div class="k-sub" id="k-active-sub"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2 id="h-chtrend">제휴채널별 유입 추이</h2>
+      <span class="tag">
+        <button class="mini-toggle on" data-ctmode="line">선그래프</button>
+        <button class="mini-toggle" data-ctmode="bar">누적막대</button>
+      </span>
+    </div>
+    <div class="chart-box" style="height:320px"><canvas id="c-chtrend"></canvas></div>
+    <div id="ct-legend" class="ct-legend"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>제휴채널별 규모</h2><span class="tag">기간 누적</span></div>
+    <div class="chart-box" style="height:280px"><canvas id="c-bar"></canvas></div>
+  </section>
+
+  <section class="panel table-panel">
+    <div class="panel-head"><h2>제휴채널별 상세현황</h2><span class="tag" id="table-range"></span></div>
+    <div class="table-scroll">
+      <table class="detail">
+        <thead>
+          <tr>
+            <th>제휴채널</th><th id="th-latest">최근 이용건</th><th>동의 / 미동의</th>
+            <th>기간 누적</th><th>비중</th><th id="th-dod">전일 대비</th><th>추이</th>
+          </tr>
+        </thead>
+        <tbody id="detail-body"></tbody>
+        <tfoot id="detail-foot"></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>제휴채널별 비중</h2><span class="tag">기간 누적</span></div>
+    <div class="chart-box" style="height:300px"><canvas id="c-share"></canvas></div>
+  </section>
+
+  <section class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h2 id="h-trend">유입 추이</h2><span class="tag">이용건 기준</span></div>
+      <div class="chart-box"><canvas id="c-daily"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>누적 유입 추이</h2><span class="tag">기간 내 누계</span></div>
+      <div class="chart-box"><canvas id="c-cumul"></canvas></div>
+    </div>
+  </section>
+
+  <p class="foot">
+    총합 = 보장분석 이용건 · Y = 마케팅 동의 / N = 미동의 ·
+    <a href="admin.html">관리자 화면</a> ·
+    <span id="foot-sample" hidden>⚠ 현재 <b>샘플(가상) 데이터</b> — 실 데이터는 로컬 실행</span>
+  </p>
+</div>
+
+<div class="loading" id="loading"><div class="spinner"></div></div>
+
+<script src="lib/chart.umd.min.js"></script>
+<script src="analytics.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

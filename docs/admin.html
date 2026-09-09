@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>제휴현황 관리자</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">ABL</span>
+    <span class="brand-name">
+      <strong>ABL생명</strong>
+      <em>제휴 마케팅 인사이트 · 관리자</em>
+    </span>
+  </div>
+  <div class="topbar-actions">
+    <a class="btn solid" href="index.html">← 대시보드</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="pagehead">
+    <h1>관리자</h1>
+    <div class="meta-pills">
+      <span class="pill">정적 사이트 · 설정 변경은 <b>data/channels.json</b> 파일 커밋</span>
+    </div>
+  </div>
+
+  <div id="banner" class="banner"></div>
+
+  <div class="admin-tabs">
+    <button data-tab="channels" class="on">제휴채널 관리</button>
+    <button data-tab="history">메일 수집이력</button>
+    <button data-tab="errors">데이터 오류현황</button>
+  </div>
+
+  <section id="tab-channels" class="panel">
+    <div class="panel-head"><h2>제휴채널 관리</h2><span class="tag">code 는 메일 본문값(수정 불가)</span></div>
+    <div class="table-scroll">
+      <table class="admin">
+        <thead><tr>
+          <th style="width:28px"></th><th>code</th><th>표시명</th><th>채널유형</th>
+          <th>사용</th><th>노출</th><th>순서</th><th></th>
+        </tr></thead>
+        <tbody id="ch-body"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+      <input type="text" id="new-code" placeholder="새 채널 code" style="padding:8px 11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+      <button id="ch-add">채널 추가</button>
+      <span style="flex:1"></span>
+      <button id="ch-download" class="primary">channels.json 다운로드</button>
+    </div>
+    <p class="foot" style="text-align:left; margin-top:14px">
+      정적 사이트(GitHub Pages)에서는 서버 저장이 없습니다. 여기서 편집한 뒤
+      <b>channels.json 다운로드</b> → 저장소 <code>docs/data/channels.json</code> 에 커밋하면 반영됩니다.
+      노출='N' 채널은 대시보드/PDF에서 숨겨지지만 수집 데이터는 유지됩니다. 행을 드래그해 순서 변경.
+    </p>
+  </section>
+
+  <section id="tab-history" class="panel table-panel" hidden>
+    <div class="panel-head"><h2>메일 수집이력</h2></div>
+    <div class="table-scroll">
+      <table class="detail" style="min-width:820px">
+        <thead><tr><th>수집시각</th><th>기준일</th><th>상태</th><th>제목</th><th>보낸사람</th><th>메시지</th></tr></thead>
+        <tbody id="hist-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="tab-errors" class="panel table-panel" hidden>
+    <div class="panel-head"><h2>데이터 오류현황</h2><span class="tag">status=error 또는 경고 존재</span></div>
+    <div class="table-scroll">
+      <table class="detail" style="min-width:720px">
+        <thead><tr><th>수집시각</th><th>기준일</th><th>상태</th><th>내용</th></tr></thead>
+        <tbody id="err-body"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>

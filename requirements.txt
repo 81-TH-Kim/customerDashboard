@@ -1,0 +1,11 @@
+# 대시보드/서버(serve.py, analytics.py), 과거데이터 적재(import_history.py),
+# IMAP 수집(collect.py --imap, imap_client.py) 은 모두 Python 표준 라이브러리만 사용합니다.
+# → 방식 1(IMAP)만 쓸 경우 아래 패키지 설치 불필요.
+#
+# 월별 엑셀 적재(import_xlsx_history.py) 에 필요:
+openpyxl>=3.1
+
+# 아래는 방식 2(Gmail API + OAuth, collect.py --api) 를 쓸 때만 필요합니다.
+google-api-python-client>=2.100
+google-auth-oauthlib>=1.2
+google-auth>=2.30

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>제휴현황 리포트</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root {
+    --blue:#0067ac; --navy:#0a2647; --sky:#00a9ce; --gold:#c8a15a;
+    --ink:#10203a; --soft:#45566e; --mute:#7a8aa0; --line:#e2e8f0; --bg-soft:#f6f8fb;
+    --up:#0f7b3f; --down:#c62828;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #e9edf2;
+    font-family: "Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    color: var(--ink); font-size: 13px; }
+  .toolbar { max-width: 940px; margin: 18px auto 0; display: flex; gap: 8px; justify-content: flex-end; }
+  .toolbar button { font: inherit; padding: 9px 18px; border-radius: 9px; border: 1px solid var(--blue);
+    background: var(--blue); color: #fff; font-weight: 700; cursor: pointer; }
+  .toolbar button.sec { background: #fff; color: var(--ink); border-color: var(--line); }
+  .page { max-width: 940px; margin: 12px auto 40px; background: #fff; padding: 0 0 30px;
+    box-shadow: 0 8px 30px rgba(10,38,71,.14); border-radius: 6px; overflow: hidden; }
+  .rpt-head { background: linear-gradient(105deg, var(--navy), #103a6b 60%, var(--blue) 130%);
+    color: #fff; padding: 24px 36px 20px; }
+  .rpt-head .kicker { font-size: 11px; letter-spacing: .12em; color: #9fc4e6; font-weight: 600; text-transform: uppercase; }
+  .rpt-head h1 { font-size: 21px; margin: 6px 0 4px; font-weight: 750; }
+  .rpt-head .sub { color: #cfe0f0; font-size: 12px; }
+  .body { padding: 22px 36px 0; }
+  .kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 22px; }
+  .kpi { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .kpi .l { font-size: 10.5px; color: var(--mute); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+  .kpi .v { font-size: 21px; font-weight: 780; margin-top: 5px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .kpi .s { font-size: 10.5px; color: var(--mute); margin-top: 3px; }
+  .up { color: var(--up); } .down { color: var(--down); }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+  .chart h2, .tbl h2 { font-size: 12.5px; margin: 0 0 8px; font-weight: 750; }
+  .chart .box { height: 190px; position: relative; }
+  .full { grid-column: 1 / -1; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { font-size: 10.5px; color: var(--mute); background: var(--bg-soft); text-transform: uppercase; letter-spacing: .02em; }
+  th:first-child, td:first-child { text-align: left; }
+  tfoot td { font-weight: 780; border-top: 2px solid #cbd5e1; }
+  .foot { margin: 18px 36px 0; padding-top: 12px; border-top: 1px solid var(--line);
+    font-size: 10.5px; color: var(--mute); display: flex; justify-content: space-between; }
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .page { box-shadow: none; margin: 0; max-width: none; border-radius: 0; }
+    .charts, .tbl { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="sec" id="btn-close">← 대시보드로 닫기</button>
+  <button onclick="window.print()">인쇄 / PDF 저장</button>
+</div>
+<script>
+  document.getElementById("btn-close").addEventListener("click", function () {
+    try {
+      if (window.opener && !window.opener.closed) { window.opener.focus(); window.close(); return; }
+    } catch (e) { /* noop */ }
+    if (window.history.length > 1) {
+      const here = window.location.href;
+      window.history.back();
+      setTimeout(function () { if (window.location.href === here) window.location.href = "index.html"; }, 200);
+      return;
+    }
+    window.location.href = "index.html";
+  });
+</script>
+<div class="page" id="page"><div class="body" style="padding:40px">불러오는 중…</div></div>
+
+<script src="lib/chart.umd.min.js"></script>
+<script src="analytics.js"></script>
+<script>
+const fmt = (n) => (n ?? 0).toLocaleString("ko-KR");
+
+(async function () {
+  const qs = new URLSearchParams(location.search);
+  const [inflow, channels, log] = await Promise.all([
+    fetch("data/inflow.json").then((r) => r.json()),
+    fetch("data/channels.json").then((r) => r.json()),
+    fetch("data/collection_log.json").then((r) => r.json()).catch(() => ({ logs: [] })),
+  ]);
+  const v = window.ANALYTICS.buildView({
+    granularity: qs.get("granularity") || "day",
+    start: qs.get("start") || null,
+    end: qs.get("end") || null,
+    channels: (qs.get("channels") || "").split(",").filter(Boolean),
+  }, { inflow, channels, log });
+
+  const k = v.kpi, L = v.labels;
+  const dodTxt = k.dod.total_pct === null ? "–"
+    : `${k.dod.total_pct > 0 ? "▲" : k.dod.total_pct < 0 ? "▼" : "―"} ${Math.abs(k.dod.total_pct)}%`;
+  const dodCls = k.dod.total_pct > 0 ? "up" : k.dod.total_pct < 0 ? "down" : "";
+
+  const rows = v.by_channel.map((c) => `<tr>
+    <td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c.color};margin-right:6px"></span>${c.name}</td>
+    <td>${fmt(c.today_total)}</td><td>${fmt(c.today_y)} / ${fmt(c.today_n)}</td>
+    <td>${fmt(c.period_total)}</td><td>${c.share_pct}%</td>
+    <td class="${c.dod_pct > 0 ? "up" : c.dod_pct < 0 ? "down" : ""}">${
+      c.dod_pct === null ? "–" : (c.dod_pct > 0 ? "+" : "") + c.dod_pct + "%"}</td></tr>`).join("");
+
+  document.getElementById("page").innerHTML = `
+    <div class="rpt-head">
+      <div class="kicker">ABL생명 · 제휴 마케팅 인사이트</div>
+      <h1>제휴 마케팅 고객 유입현황 리포트</h1>
+      <div class="sub">${L.unit}별 · 조회기간 ${v.query.start} ~ ${v.query.end}
+        ${v.query.channels.length ? " · 채널: " + v.query.channels.join(", ") : " · 전체 채널"}</div>
+    </div>
+    <div class="body">
+      <div class="kpis">
+        <div class="kpi"><div class="l">${L.latest} (${k.today.date || "-"}${k.latest_partial ? " · 진행 중" : ""})</div>
+          <div class="v">${fmt(k.today.total)}</div><div class="s">마케팅동의 ${fmt(k.today.y)} · 미동의 ${fmt(k.today.n)}</div></div>
+        <div class="kpi"><div class="l">기간 누적 (보장분석 이용건)</div>
+          <div class="v">${fmt(k.period_total.total)}</div><div class="s">동의 ${fmt(k.period_total.y)} · 미동의 ${fmt(k.period_total.n)} · 동의율 ${k.period_total.total ? (k.period_total.y / k.period_total.total * 100).toFixed(1) : 0}%</div></div>
+        <div class="kpi"><div class="l">${L.delta} (${k.dod.prev_date || "-"})</div>
+          <div class="v ${dodCls}">${dodTxt}</div><div class="s">${k.dod.note ? k.dod.note : (k.dod.total_diff > 0 ? "+" : "") + fmt(k.dod.total_diff) + "건"}</div></div>
+        <div class="kpi"><div class="l">활성 제휴채널</div>
+          <div class="v">${k.active_channels}</div><div class="s">조회 포함 ${k.channels_in_view}개</div></div>
+      </div>
+      <div class="charts">
+        <div class="chart full"><h2>제휴채널별 유입 추이 (${L.unit}별)</h2><div class="box"><canvas id="ct"></canvas></div></div>
+        <div class="chart full"><h2>제휴채널별 규모 (기간 누적)</h2><div class="box"><canvas id="b"></canvas></div></div>
+      </div>
+      <div class="tbl">
+        <h2>제휴채널별 상세현황</h2>
+        <table>
+          <thead><tr><th>제휴채널</th><th>${L.col}</th><th>동의 / 미동의</th><th>기간 누적</th><th>비중</th><th>${L.delta}</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr><td>합계</td><td>${fmt(k.today.total)}</td><td>${fmt(k.today.y)} / ${fmt(k.today.n)}</td>
+            <td>${fmt(k.period_total.total)}</td><td>100%</td><td>${dodTxt}</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="charts" style="margin-top:20px">
+        <div class="chart"><h2>${L.unit}별 유입 추이</h2><div class="box"><canvas id="d"></canvas></div></div>
+        <div class="chart"><h2>누적 유입 추이</h2><div class="box"><canvas id="c"></canvas></div></div>
+      </div>
+    </div>
+    <div class="foot">
+      <span>데이터 기준일 ${v.as_of.latest_date || "-"} · 누적 ${v.as_of.record_count}건</span>
+      <span>최종 수집 ${v.as_of.last_collected_at ? new Date(v.as_of.last_collected_at).toLocaleString("ko-KR") : "-"} · 생성 ${new Date().toLocaleString("ko-KR")}</span>
+    </div>`;
+
+  const opt = { animation: false, responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+              y: { beginAtZero: true, grid: { color: "rgba(16,32,58,.07)" }, ticks: { font: { size: 10 }, callback: fmt } } } };
+  new Chart(d, { type: "line", data: { labels: v.daily_trend.map((x) => x.date),
+    datasets: [{ data: v.daily_trend.map((x) => x.total), borderColor: "#0067ac", borderWidth: 2,
+      backgroundColor: "rgba(0,103,172,.12)", fill: true, tension: .3, pointRadius: 0 }] }, options: opt });
+  new Chart(c, { type: "line", data: { labels: v.cumulative_trend.map((x) => x.date),
+    datasets: [{ data: v.cumulative_trend.map((x) => x.total), borderColor: "#00a1b5", borderWidth: 2,
+      backgroundColor: "rgba(0,161,181,.12)", fill: true, tension: .15, pointRadius: 0 }] }, options: opt });
+  new Chart(ct, { type: "line", data: { labels: v.buckets,
+    datasets: v.by_channel.map((c) => ({ label: c.name, data: c.series.map((s) => s.total),
+      borderColor: c.color, backgroundColor: c.color, borderWidth: 1.8, fill: false, tension: .3, pointRadius: 0 })) },
+    options: Object.assign({}, opt, { plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 10, font: { size: 9 } } } } }) });
+  new Chart(b, { type: "bar", data: { labels: v.by_channel.map((x) => x.name),
+    datasets: [{ data: v.by_channel.map((x) => x.period_total),
+      backgroundColor: v.by_channel.map((x) => x.color), borderRadius: 5, maxBarThickness: 44 }] }, options: opt });
+})();
+</script>
+</body>
+</html>
