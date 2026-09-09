@@ -4,6 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>제휴현황 관리자</title>
+<script>
+  try {
+    if (!sessionStorage.getItem("dash.key")) {
+      var _n = location.pathname.split("/").pop() + location.search;
+      location.replace("login.html?next=" + encodeURIComponent(_n || "index.html"));
+    }
+  } catch (e) {}
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -17,7 +25,9 @@
     </span>
   </div>
   <div class="topbar-actions">
+    <span id="who" class="pill" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff"></span>
     <a class="btn solid" href="index.html">← 대시보드</a>
+    <button id="btn-logout">로그아웃</button>
   </div>
 </header>
 
@@ -33,6 +43,7 @@
 
   <div class="admin-tabs">
     <button data-tab="channels" class="on">제휴채널 관리</button>
+    <button data-tab="users" id="tabbtn-users" hidden>사용자 관리</button>
     <button data-tab="history">메일 수집이력</button>
     <button data-tab="errors">데이터 오류현황</button>
   </div>
@@ -61,6 +72,33 @@
     </p>
   </section>
 
+  <section id="tab-users" class="panel" hidden>
+    <div class="panel-head"><h2>사용자 관리</h2><span class="tag">로그인 = 데이터 복호화 권한</span></div>
+    <div class="table-scroll">
+      <table class="admin">
+        <thead><tr><th>아이디</th><th>이름</th><th>권한</th><th></th></tr></thead>
+        <tbody id="u-body"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px; display:grid; gap:8px; max-width:420px">
+      <div style="font-weight:700; font-size:13px">사용자 추가</div>
+      <input type="text" id="u-id" placeholder="아이디 (영문/숫자)" style="padding:8px 11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+      <input type="text" id="u-name" placeholder="이름" style="padding:8px 11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+      <input type="text" id="u-pw" placeholder="임시 비밀번호 (6자 이상)" style="padding:8px 11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+      <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="u-admin" /> 관리자 권한</label>
+      <button id="u-add" class="primary">목록에 추가</button>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:8px">
+      <button id="u-download" class="primary">users.json 다운로드</button>
+    </div>
+    <p class="foot" style="text-align:left; margin-top:14px">
+      정적 사이트에는 서버 저장이 없습니다. 여기서 편집한 뒤 <b>users.json 다운로드</b> →
+      저장소 <code>docs/users.json</code> 에 커밋(또는 <code>publish.bat</code>)하면 반영됩니다.
+      <br>제거한 사용자의 <b>과거 데이터 접근까지 완전히 차단</b>하려면 로컬에서
+      <code>python scripts/manage_users.py rekey</code> 로 키를 교체하세요.
+    </p>
+  </section>
+
   <section id="tab-history" class="panel table-panel" hidden>
     <div class="panel-head"><h2>메일 수집이력</h2></div>
     <div class="table-scroll">
@@ -82,6 +120,7 @@
   </section>
 </div>
 
+<script src="auth.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

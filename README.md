@@ -3,45 +3,55 @@
 RPA가 매일 보내는 `[RPA]플랫폼 제휴 현황_<날짜>` 메일을 수집해
 **일자·월·년 단위 × 채널별 유입현황**을 웹 대시보드로 제공합니다.
 
-## 🌐 공개 사이트 (GitHub Pages)
+## 🌐 사이트 (GitHub Pages)
 
 **https://81-th-kim.github.io/customerDashboard/**
 
 > Settings → Pages → Source: **Deploy from a branch** / Branch **main** / Folder **/docs**
->
-> ⚠️ **공개 사이트에는 `docs/data/*.json` 의 샘플(가상) 데이터만 올라갑니다.**
-> 실 데이터는 로컬에서만 다루며, 공개 배포는 `publish.bat` 로만 명시적으로 실행합니다.
-> (실 데이터를 공개하려면 저장소를 **Private + GitHub Pro** 로 전환하는 것을 권장)
+
+### 🔐 로그인 (지정 사용자만)
+
+- 접속하면 **로그인 화면**이 먼저 나옵니다. 관리자가 등록한 아이디/비밀번호만 통과.
+- **데이터는 암호화되어(AES-256-GCM) 저장**됩니다 (`docs/data/bundle.enc`).
+  로그인 = 비밀번호로 복호화 키를 풀어 대시보드를 여는 방식.
+  → GitHub에 올라간 파일은 **암호문**이라, 링크를 알아도 로그인 없이는 내용을 볼 수 없습니다.
+- 공개 데모: 아이디 `demo` / 비밀번호 `demo1234` (샘플 데이터)
+
+> 더 강력하게: 저장소를 **Private + GitHub Pro**(Pages 비공개) 로 두거나,
+> **Cloudflare Pages + Access**(무료, 이메일 인증) 앞단에 두면 됩니다. (README 6절)
 
 ---
 
 ## 구조
 
 ```
-docs/                     ← GitHub Pages 가 서비스하는 정적 사이트 (서버 불필요)
-  index.html  app.js  analytics.js  style.css   대시보드 (조회단위 일/월/년, 채널별 차트)
+docs/                     ← GitHub Pages 정적 사이트 (서버 불필요)
+  login.html  auth.js      로그인 화면 + 클라이언트 암·복호화 (PBKDF2·AES-GCM)
+  index.html  app.js  analytics.js  style.css   대시보드 (일/월/년, 채널별 차트)
   report.html                                    PDF용 리포트
-  admin.html  admin.js                           채널 설정 뷰어 + channels.json 다운로드
-  lib/chart.umd.min.js                           Chart.js (로컬 벤더)
-  data/inflow.json  channels.json  collection_log.json   ← 사이트가 읽는 데이터(현재 샘플)
+  admin.html  admin.js                           채널 관리 + 사용자 관리(관리자)
+  lib/chart.umd.min.js                           Chart.js
+  data/bundle.enc          ← 암호화된 데이터 번들 (inflow+channels+log)
+  users.json               ← 로그인 사용자 목록 (비번은 없음, 감싼 키만)
 
-scripts/                  ← 로컬 전용 (Python). 메일 수집·데이터 적재
-  serve.py               로컬 미리보기 서버 (docs/ 를 서비스, data/live/ 우선 노출)
-  analytics.py           집계 로직 (analytics.js 와 동일 규칙 — 검증용)
-  collect.py             메일 수집 → 파싱 → 검증 → data/live/*.json 적재
+scripts/                  ← 로컬 전용 (Python)
+  serve.py               로컬 미리보기 서버 (docs/ 서비스)
+  analytics.py           집계 로직 (analytics.js 와 동일 — 검증용)
+  collect.py             메일 수집 → data/live/*.json 적재
   imap_client.py         Gmail IMAP (앱 비밀번호)
-  parser.py              RPA 메일 표 파서 + 제목 날짜 추출
-  import_history.py / import_xlsx_history.py   과거 데이터 일괄 적재
-  store.py               파일 저장소 (원자적 쓰기, 중복·검증, 샘플 자동생성)
+  parser.py              RPA 메일 파서 + 제목 날짜 추출
+  import_history.py / import_xlsx_history.py   과거 데이터 적재
+  manage_users.py        ★ 사용자 추가/삭제 + 데이터 암호화(pack)
+  store.py               파일 저장소
 
 data/
-  *.sample.json          샘플 데이터 원본
+  *.sample.json          샘플 데이터 (공개 데모용)
   history_sample.csv     과거 CSV 적재 양식
-  live/                  ← 로컬 실 데이터 (git 제외). collect.py 가 여기에 씀
+  live/                  ← 로컬 실 데이터 (git 제외)
 
 run_collect.bat          매일 07:30 자동 수집 (작업 스케줄러 등록됨)
-publish.bat              data/live → docs/data 복사 + git push (공개 배포, 확인 프롬프트)
-.env / .env.example      Gmail 앱 비밀번호 등 (git 제외)
+publish.bat              data/live 암호화 → docs/data/bundle.enc → git push (확인 프롬프트)
+.env / .env.example      Gmail 앱 비밀번호, DASH_CONTENT_KEY (git 제외)
 ```
 
 ---
@@ -105,15 +115,47 @@ python scripts/import_xlsx_history.py "파일.xlsx" --year 2026 --months 1-8
 
 ---
 
-## 4. 공개 사이트에 배포
+## 4. 로그인 사용자 관리 (`manage_users.py`)
+
+정적 사이트라 서버 계정 DB가 없습니다. 대신 **데이터를 암호화**하고,
+사용자별로 복호화 키를 그 사람 비밀번호로 감싸(wrap) `docs/users.json` 에 둡니다.
+`users.json` 에는 **비밀번호가 저장되지 않습니다** (PBKDF2 salt + 감싼 키만).
 
 ```bash
-publish.bat        # 확인 프롬프트 → data/live/*.json 를 docs/data/ 로 복사 → git commit + push
-```
-푸시 후 1~2분이면 GitHub Pages에 반영됩니다.
+# 최초 1회 — 관리자 생성 + 암호화 키(.env: DASH_CONTENT_KEY) 발급
+python scripts/manage_users.py init --admin-id kim --admin-name "김관리자"
 
-> 실 데이터를 올리면 **공개 URL에서 누구나 조회 가능**합니다.
-> 사내 데이터는 저장소를 Private 로 두고 GitHub Pro(Pages 비공개) 사용을 권장합니다.
+python scripts/manage_users.py add   --id lee  --name "이임원"        # 조회 사용자
+python scripts/manage_users.py add   --id park --name "박부장" --admin # 관리자
+python scripts/manage_users.py passwd --id lee                         # 비번 변경
+python scripts/manage_users.py remove --id lee                         # 제거
+python scripts/manage_users.py list
+python scripts/manage_users.py rekey    # 키 교체(전원 임시비번 재발급) — 완전 차단 시
+```
+- 브라우저 **관리자 → 사용자 관리** 탭에서도 추가/제거 후 `users.json 다운로드` 가능
+- 변경 후 반드시 `publish.bat` (또는 `docs/users.json` 커밋) 으로 반영
+- **제거(remove)** 는 로그인만 막습니다. 이미 데이터를 받아 본 사람의 접근까지
+  끊으려면 **`rekey`** (키 교체 + 데이터 재암호화) 를 실행하세요.
+
+## 5. 배포
+
+```bash
+publish.bat        # 확인 → data/live 암호화 → docs/data/bundle.enc → git commit + push
+```
+푸시 후 1~2분이면 사이트에 반영됩니다. (사이트엔 암호문만 올라감)
+
+---
+
+## 6. 더 강력한 접근 제어 (선택)
+
+| 방법 | 특징 |
+|---|---|
+| 지금 방식 (암호화 + 로그인) | 무료. 링크만으론 못 봄. 비번 공유 관리는 수동 |
+| 저장소 **Private + GitHub Pro** ($4/월) | Pages 자체가 비공개, GitHub 계정으로 접근 |
+| **Cloudflare Pages + Access** (무료 50명) | 이메일 OTP/SSO, 즉시 차단, 코드 변경 없음 |
+
+Cloudflare Access: Cloudflare에 이 저장소를 Pages로 연결 → Zero Trust → Access →
+Application 추가(도메인 = pages.dev 주소) → 정책에 허용 이메일 지정. 끝.
 
 ---
 

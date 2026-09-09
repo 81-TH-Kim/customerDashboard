@@ -1,0 +1,17 @@
+{
+  "v": 1,
+  "iterations": 600000,
+  "verify": {
+    "iv": "pgTAuSZQguw1RK7s",
+    "ct": "MPPaQfmU6syOOqw0v3xSbMBsj1XrEvqWcwCU/TpF+ZYzz8xu"
+  },
+  "users": {
+    "demo": {
+      "name": "데모",
+      "role": "admin",
+      "salt": "NuKBiYFgYEIey45l/opZSQ==",
+      "iv": "XuKli4vxLZKI8U1M",
+      "wrapped": "Gdae75mVGG2mGMvWO3hLJKNaYUw+3rNjLtBHYEhhnPORZkBFcixMmHsNZeGHWVY0"
+    }
+  }
+}

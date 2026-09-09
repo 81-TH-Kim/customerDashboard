@@ -29,4 +29,4 @@ venv/
 .DS_Store
 Thumbs.db
 
-# docs/data/*.json (공개 샘플) 은 커밋 대상이므로 무시하지 않음
+# docs/data/bundle.enc, docs/users.json 은 커밋 대상 (암호문 + 감싼 키만, 비번 없음)

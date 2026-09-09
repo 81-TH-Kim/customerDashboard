@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>로그인 · 제휴 마케팅 인사이트</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root { --blue:#0067ac; --navy:#0a2647; --ink:#10203a; --mute:#6b7a90; --line:#dfe4ec; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: linear-gradient(140deg, #0a2647 0%, #103a6b 55%, #0067ac 130%);
+    font-family: "Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif; color: var(--ink); padding: 20px; }
+  .card { width: 100%; max-width: 380px; background: #fff; border-radius: 16px;
+    box-shadow: 0 20px 60px -10px rgba(0,0,0,.4); padding: 34px 30px 28px; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+  .mark { width: 34px; height: 34px; border-radius: 10px; background: var(--blue); color: #fff;
+    display: grid; place-items: center; font-weight: 800; font-size: 12px; }
+  .brand b { font-size: 15px; } .brand span { display: block; font-size: 11px; color: var(--mute); font-weight: 500; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  .desc { font-size: 12.5px; color: var(--mute); margin: 0 0 20px; }
+  label { display: block; font-size: 12px; font-weight: 700; color: var(--mute); margin: 12px 0 5px; }
+  input { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; }
+  input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,103,172,.12); }
+  button { width: 100%; margin-top: 18px; padding: 11px; border: 0; border-radius: 9px;
+    background: var(--blue); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+  button:hover { background: #005391; } button:disabled { opacity: .6; cursor: progress; }
+  .err { margin-top: 14px; font-size: 12.5px; color: #c62828; min-height: 18px; }
+  .hint { margin-top: 16px; font-size: 11px; color: var(--mute); text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+<form class="card" id="form" autocomplete="off">
+  <div class="brand">
+    <span class="mark">ABL</span>
+    <span><b>ABL생명</b><span>제휴 마케팅 인사이트</span></span>
+  </div>
+  <h1>로그인</h1>
+  <p class="desc">지정된 사용자만 대시보드를 조회할 수 있습니다.</p>
+
+  <label for="uid">아이디</label>
+  <input id="uid" name="uid" type="text" autocapitalize="off" autocomplete="username" required />
+  <label for="pw">비밀번호</label>
+  <input id="pw" name="pw" type="password" autocomplete="current-password" required />
+
+  <button type="submit" id="submit">로그인</button>
+  <div class="err" id="err"></div>
+  <p class="hint" id="hint"></p>
+</form>
+
+<script src="auth.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const next = new URLSearchParams(location.search).get("next") || "index.html";
+  if (window.AUTH.isLoggedIn()) location.replace(next);
+
+  // 공개 데모용 힌트 (users.json 에 demo 계정이 있을 때만 노출)
+  fetch("users.json?_=" + Date.now()).then((r) => r.json()).then((u) => {
+    if (u.users && u.users.demo) $("hint").textContent = "데모 계정 — 아이디 demo / 비밀번호 demo1234";
+  }).catch(() => {});
+
+  $("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("err").textContent = "";
+    $("submit").disabled = true; $("submit").textContent = "확인 중…";
+    try {
+      await window.AUTH.login($("uid").value.trim(), $("pw").value);
+      location.replace(next.startsWith("http") ? "index.html" : next);
+    } catch (err) {
+      $("err").textContent = err.message || "로그인 실패";
+      $("submit").disabled = false; $("submit").textContent = "로그인";
+    }
+  });
+</script>
+</body>
+</html>

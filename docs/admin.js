@@ -4,6 +4,10 @@ const esc = (s) => (s ?? "").toString().replace(/[&<>"]/g, (m) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
 let channels = [];
 let channelsMeta = {};
+let BUNDLE = null;
+let usersDoc = null;
+
+if (!window.AUTH.requireLogin()) { throw new Error("redirect to login"); }
 
 let bt;
 function banner(kind, msg, sticky) {
@@ -12,17 +16,29 @@ function banner(kind, msg, sticky) {
   clearTimeout(bt); if (!sticky) bt = setTimeout(() => (b.className = "banner"), 6000);
 }
 
+const me = window.AUTH.currentUser();
+if (me) $("who").textContent = `${me.name}${me.role === "admin" ? " · 관리자" : ""}`;
+$("btn-logout").addEventListener("click", () => window.AUTH.logout());
+
 /* -------- tabs -------- */
+const TABS = ["channels", "users", "history", "errors"];
 document.querySelectorAll(".admin-tabs button").forEach((b) =>
   b.addEventListener("click", () => {
     document.querySelectorAll(".admin-tabs button").forEach((x) => x.classList.toggle("on", x === b));
-    ["channels", "history", "errors"].forEach((t) => ($("tab-" + t).hidden = t !== b.dataset.tab));
+    TABS.forEach((t) => ($("tab-" + t).hidden = t !== b.dataset.tab));
     if (b.dataset.tab === "history" || b.dataset.tab === "errors") loadLogs();
+    if (b.dataset.tab === "users") loadUsers();
   }));
+
+/* -------- 데이터 로드 -------- */
+async function bundle() {
+  if (!BUNDLE) BUNDLE = await window.AUTH.loadBundle();
+  return BUNDLE;
+}
 
 /* -------- channels -------- */
 async function loadChannels() {
-  const d = await (await fetch("data/channels.json")).json();
+  const d = (await bundle()).channels || { channels: [] };
   channels = d.channels || [];
   channelsMeta = { _comment: d._comment || "제휴채널 마스터", updated_at: d.updated_at };
   renderChannels();
@@ -54,7 +70,7 @@ function renderChannels() {
     }));
   tb.querySelectorAll("[data-del]").forEach((btn) =>
     btn.addEventListener("click", () => {
-      if (confirm(`${channels[+btn.dataset.del].code} 채널을 목록에서 삭제할까요?`)) {
+      if (confirm(`${channels[+btn.dataset.del].code} 채널을 삭제할까요?`)) {
         channels.splice(+btn.dataset.del, 1); renderChannels();
       }
     }));
@@ -88,18 +104,63 @@ $("ch-add").addEventListener("click", () => {
 });
 
 $("ch-download").addEventListener("click", () => {
-  const out = Object.assign({}, channelsMeta,
-    { updated_at: new Date().toISOString(), channels });
-  const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = "channels.json"; a.click();
-  URL.revokeObjectURL(a.href);
-  banner("ok", "channels.json 을 내려받았습니다. 저장소 docs/data/channels.json 에 커밋하세요.");
+  const out = Object.assign({}, channelsMeta, { updated_at: new Date().toISOString(), channels });
+  download("channels.json", JSON.stringify(out, null, 2));
+  banner("ok", "channels.json 다운로드. data/live/channels.json 에 넣고 publish.bat 실행하세요.");
+});
+
+/* -------- users -------- */
+async function loadUsers() {
+  if (!me || me.role !== "admin") {
+    $("u-body").innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--ink-3)">관리자만 사용할 수 있습니다.</td></tr>`;
+    return;
+  }
+  if (!usersDoc) usersDoc = await fetch("users.json?_=" + Date.now()).then((r) => r.json());
+  renderUsers();
+}
+
+function renderUsers() {
+  const tb = $("u-body"); tb.innerHTML = "";
+  const users = usersDoc.users || {};
+  Object.keys(users).forEach((uid) => {
+    const u = users[uid];
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><code>${esc(uid)}</code></td><td>${esc(u.name || "")}</td>
+      <td>${u.role === "admin" ? "관리자" : "조회"}</td>
+      <td class="row-actions">${uid === me.id ? "<span style='color:var(--ink-3)'>(본인)</span>"
+        : `<button data-del="${esc(uid)}">제거</button>`}</td>`;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll("[data-del]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      const uid = btn.dataset.del;
+      if (confirm(`'${uid}' 사용자를 제거할까요?`)) { delete usersDoc.users[uid]; renderUsers(); }
+    }));
+}
+
+$("u-add").addEventListener("click", async () => {
+  const id = $("u-id").value.trim(), name = $("u-name").value.trim(), pw = $("u-pw").value;
+  if (!/^[A-Za-z0-9_.-]{2,}$/.test(id)) return banner("warn", "아이디는 영문/숫자 2자 이상.");
+  if (!name) return banner("warn", "이름을 입력하세요.");
+  if (pw.length < 6) return banner("warn", "임시 비밀번호는 6자 이상.");
+  if (usersDoc.users[id]) return banner("warn", "이미 있는 아이디입니다.");
+  try {
+    const wrapped = await window.AUTH.wrapForNewUser(pw, usersDoc.iterations);
+    usersDoc.users[id] = { name, role: $("u-admin").checked ? "admin" : "viewer", ...wrapped };
+    $("u-id").value = $("u-name").value = $("u-pw").value = ""; $("u-admin").checked = false;
+    renderUsers();
+    banner("ok", `'${id}' 추가됨. 목록 저장은 아래 "users.json 다운로드".`);
+  } catch (e) { banner("err", "추가 실패: " + e.message, true); }
+});
+
+$("u-download").addEventListener("click", () => {
+  download("users.json", JSON.stringify(usersDoc, null, 2));
+  banner("ok", "users.json 다운로드. docs/users.json 에 커밋하면 반영됩니다.");
 });
 
 /* -------- logs -------- */
 async function loadLogs() {
-  const d = await (await fetch("data/collection_log.json")).json().catch(() => ({ logs: [] }));
+  const d = (await bundle()).log || { logs: [] };
   const logs = (d.logs || []).slice().reverse();
   const badge = (s) => ({
     success: '<span class="delta up">정상</span>', skipped: '<span class="delta flat">중복</span>',
@@ -123,4 +184,12 @@ async function loadLogs() {
     : `<tr><td colspan="4" style="text-align:center;color:var(--ink-3)">오류/경고 없음</td></tr>`;
 }
 
-loadChannels();
+/* -------- util -------- */
+function download(name, text) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+}
+
+if (me && me.role === "admin") $("tabbtn-users").hidden = false;
+loadChannels().catch((e) => banner("err", "데이터 로드 실패: " + e.message, true));

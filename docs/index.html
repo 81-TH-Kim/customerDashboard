@@ -7,6 +7,15 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <link rel="stylesheet" href="style.css" />
+<script>
+  /* 로그인 게이트 — 본문 렌더 전에 미로그인 사용자를 login.html 로 보냄 */
+  try {
+    if (!sessionStorage.getItem("dash.key")) {
+      var _n = location.pathname.split("/").pop() + location.search;
+      location.replace("login.html?next=" + encodeURIComponent(_n || "index.html"));
+    }
+  } catch (e) {}
+</script>
 </head>
 <body>
 <header class="topbar">
@@ -18,11 +27,13 @@
     </span>
   </div>
   <div class="topbar-actions">
+    <span id="who" class="pill" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff"></span>
     <button id="btn-refresh" title="데이터를 다시 불러옵니다">
       <span aria-hidden="true">↻</span><span class="label-hide">새로고침</span>
     </button>
     <button id="btn-pdf" class="btn solid">제휴현황 PDF</button>
     <a class="btn" href="admin.html">관리자</a>
+    <button id="btn-logout" title="로그아웃">로그아웃</button>
   </div>
 </header>
 
@@ -179,6 +190,7 @@
 
 <div class="loading" id="loading"><div class="spinner"></div></div>
 
+<script src="auth.js"></script>
 <script src="lib/chart.umd.min.js"></script>
 <script src="analytics.js"></script>
 <script src="app.js"></script>

@@ -47,25 +47,20 @@ function minBucket(v, gran) {
   return gran === "year" ? dmin.slice(0, 4) : gran === "month" ? dmin.slice(0, 7) : dmin;
 }
 
-/* ============================== data load (정적 JSON) */
+/* ============================== data load (암호화 번들) */
 async function fetchData(force) {
   if (DATA && !force) return DATA;
-  const bust = force ? "?_=" + Date.now() : "";
-  const [inflow, channels, log] = await Promise.all([
-    fetch("data/inflow.json" + bust).then((r) => r.json()),
-    fetch("data/channels.json" + bust).then((r) => r.json()),
-    fetch("data/collection_log.json" + bust).then((r) => r.json()).catch(() => ({ logs: [] })),
-  ]);
-  DATA = { inflow, channels, log };
-  // 샘플 데이터 표식
-  const codes = (channels.channels || []).map((c) => c.code);
-  const sample = codes.includes("PARTNER_A") || /샘플|가상|sample/i.test(inflow._comment || "");
+  const b = await window.AUTH.loadBundle(force);   // {inflow, channels, log}
+  DATA = { inflow: b.inflow || { records: [] }, channels: b.channels || { channels: [] }, log: b.log || { logs: [] } };
+  const codes = (DATA.channels.channels || []).map((c) => c.code);
+  const sample = codes.includes("PARTNER_A") || /샘플|가상|sample/i.test(DATA.inflow._comment || "");
   const fs = $("foot-sample"); if (fs) fs.hidden = !sample;
   return DATA;
 }
 
 /* ============================== load / render */
 async function load(force) {
+  if (!window.AUTH.requireLogin()) return;
   $("loading").hidden = false;
   try {
     let v;
@@ -392,5 +387,11 @@ $("btn-refresh").addEventListener("click", async () => {
   catch (e) { banner("err", "새로고침 실패: " + e.message, true); }
   finally { btn.disabled = false; }
 });
+
+$("btn-logout").addEventListener("click", () => window.AUTH.logout());
+(function () {
+  const u = window.AUTH.currentUser();
+  if (u) $("who").textContent = `${u.name}${u.role === "admin" ? " · 관리자" : ""}`;
+})();
 
 load();

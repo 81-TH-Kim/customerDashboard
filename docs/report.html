@@ -4,6 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>제휴현황 리포트</title>
+<script>
+  try {
+    if (!sessionStorage.getItem("dash.key")) {
+      var _n = location.pathname.split("/").pop() + location.search;
+      location.replace("login.html?next=" + encodeURIComponent(_n || "index.html"));
+    }
+  } catch (e) {}
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <style>
   :root {
@@ -73,24 +81,22 @@
 </script>
 <div class="page" id="page"><div class="body" style="padding:40px">불러오는 중…</div></div>
 
+<script src="auth.js"></script>
 <script src="lib/chart.umd.min.js"></script>
 <script src="analytics.js"></script>
 <script>
 const fmt = (n) => (n ?? 0).toLocaleString("ko-KR");
 
 (async function () {
+  if (!window.AUTH.requireLogin()) return;
   const qs = new URLSearchParams(location.search);
-  const [inflow, channels, log] = await Promise.all([
-    fetch("data/inflow.json").then((r) => r.json()),
-    fetch("data/channels.json").then((r) => r.json()),
-    fetch("data/collection_log.json").then((r) => r.json()).catch(() => ({ logs: [] })),
-  ]);
+  const bundle = await window.AUTH.loadBundle();
   const v = window.ANALYTICS.buildView({
     granularity: qs.get("granularity") || "day",
     start: qs.get("start") || null,
     end: qs.get("end") || null,
     channels: (qs.get("channels") || "").split(",").filter(Boolean),
-  }, { inflow, channels, log });
+  }, bundle);
 
   const k = v.kpi, L = v.labels;
   const dodTxt = k.dod.total_pct === null ? "–"
