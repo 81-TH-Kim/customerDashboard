@@ -2,16 +2,16 @@
   "v": 1,
   "iterations": 600000,
   "verify": {
-    "iv": "pgTAuSZQguw1RK7s",
-    "ct": "MPPaQfmU6syOOqw0v3xSbMBsj1XrEvqWcwCU/TpF+ZYzz8xu"
+    "iv": "71Lt7HgYMY77ePty",
+    "ct": "z/b/zDD4k7wsDZK6/aSquWqB62pJnqLTKN5mhPxCX6/gJOHO"
   },
   "users": {
-    "demo": {
-      "name": "데모",
+    "doyourself": {
+      "name": "doyourself",
       "role": "admin",
-      "salt": "NuKBiYFgYEIey45l/opZSQ==",
-      "iv": "XuKli4vxLZKI8U1M",
-      "wrapped": "Gdae75mVGG2mGMvWO3hLJKNaYUw+3rNjLtBHYEhhnPORZkBFcixMmHsNZeGHWVY0"
+      "salt": "D6CQzGEcYARg75aiOZc4GA==",
+      "iv": "Q35q1I++nucodTVx",
+      "wrapped": "rvHksP49kfN/Nkt+aALOS2uHO8Tum5nPaOG5YwJuAC1fTtUPYnCK8sjATuBtl0Aj"
     }
   }
 }
