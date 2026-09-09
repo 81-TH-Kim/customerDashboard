@@ -1,0 +1,34 @@
+# Render Blueprint — 제휴현황 대시보드 (서버 모드: 로그인 + 서버측 데이터)
+# 배포: Render 대시보드 → New → Blueprint → 이 저장소 연결 → sync: false 인 값 입력
+services:
+  - type: web
+    name: customer-dashboard
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/serve.py --host 0.0.0.0 --port $PORT
+    healthCheckPath: /login.html
+    autoDeploy: true
+    envVars:
+      - key: APP_MODE
+        value: server
+      - key: COLLECT_ON_SERVER
+        value: "1"
+      - key: DASH_DATA_DIR
+        value: /var/data
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: SESSION_SECRET
+        generateValue: true          # Render 가 자동 생성
+      - key: BOOTSTRAP_ADMIN
+        sync: false                  # 예: doyourself:강한비밀번호   (첫 관리자, users.json 없을 때만)
+      - key: GMAIL_ADDRESS
+        sync: false                  # 매일 자동 수집용 (선택)
+      - key: GMAIL_APP_PASSWORD
+        sync: false                  # Gmail 앱 비밀번호 16자
+    disk:
+      name: dashboard-data
+      mountPath: /var/data           # inflow/channels/log/users.json 이 여기에 저장(영구)
+      sizeGB: 1

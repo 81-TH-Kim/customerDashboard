@@ -6,7 +6,7 @@
 <title>제휴현황 관리자</title>
 <script>
   try {
-    if (!sessionStorage.getItem("dash.key")) {
+    if (!window.APP_MODE && !sessionStorage.getItem("dash.key")) {
       var _n = location.pathname.split("/").pop() + location.search;
       location.replace("login.html?next=" + encodeURIComponent(_n || "index.html"));
     }
@@ -66,6 +66,20 @@
     <button data-tab="errors">데이터 오류현황</button>
   </div>
 
+  <details id="import-panel" class="panel" style="margin-bottom:16px" hidden>
+    <summary style="cursor:pointer;font-weight:700;font-size:13.5px">📥 데이터 업로드 (로컬 → 서버)</summary>
+    <div style="margin-top:12px; display:grid; gap:8px; max-width:520px">
+      <p class="foot" style="text-align:left;margin:0">
+        로컬 <code>data/live/</code> 의 파일을 골라 서버(Render)에 올립니다. 초기 1회 또는 수동 갱신 시.
+        이후에는 자동 수집(매일)이 서버에서 데이터를 채웁니다.
+      </p>
+      <label style="font-size:12.5px">inflow.json <input type="file" id="imp-inflow" accept=".json" /></label>
+      <label style="font-size:12.5px">channels.json <input type="file" id="imp-channels" accept=".json" /></label>
+      <label style="font-size:12.5px">collection_log.json <input type="file" id="imp-log" accept=".json" /></label>
+      <button id="imp-run" class="primary">업로드</button>
+    </div>
+  </details>
+
   <section id="tab-channels" class="panel">
     <div class="panel-head"><h2>제휴채널 관리</h2><span class="tag">code 는 메일 본문값(수정 불가)</span></div>
     <div class="table-scroll">
@@ -120,7 +134,8 @@
   </section>
 
   <section id="tab-history" class="panel table-panel" hidden>
-    <div class="panel-head"><h2>메일 수집이력</h2></div>
+    <div class="panel-head"><h2>메일 수집이력</h2>
+      <button id="collect-now" hidden>지금 수집</button></div>
     <div class="table-scroll">
       <table class="detail" style="min-width:820px">
         <thead><tr><th>수집시각</th><th>기준일</th><th>상태</th><th>제목</th><th>보낸사람</th><th>메시지</th></tr></thead>

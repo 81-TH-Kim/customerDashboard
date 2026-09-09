@@ -3,22 +3,42 @@
 RPA가 매일 보내는 `[RPA]플랫폼 제휴 현황_<날짜>` 메일을 수집해
 **일자·월·년 단위 × 채널별 유입현황**을 웹 대시보드로 제공합니다.
 
-## 🌐 사이트 (GitHub Pages)
+## 배포 방식 2가지
+
+| | GitHub Pages (static) | **Render (server) — 권장** |
+|---|---|---|
+| 인증 | 클라이언트 (데이터 AES-GCM 암호화) | **서버 세션** (비번은 서버에서 PBKDF2 검증) |
+| 데이터 노출 | 암호문이 공개 저장소에 올라감 | 서버에만 존재, 인증 요청에만 응답 |
+| 사용자 관리 | 화면 편집 → 파일/토큰 커밋 | **화면에서 추가/삭제 즉시 반영, 즉시 차단** |
+| 데이터 갱신 | 로컬 수집 → `publish.bat` | 서버가 **매일 자동 수집** |
+| 비용 | 무료 | Render Free (15분 무사용 시 슬립) |
+
+같은 코드가 `APP_MODE` 로 두 모드를 지원합니다.
+
+### 🅰 Render 배포 (server 모드)
+
+1. GitHub 저장소에 이 코드가 올라가 있어야 함
+2. **Render** (render.com) 가입 → Dashboard → **New → Blueprint**
+3. 이 저장소 연결 → `render.yaml` 자동 인식 → **Apply**
+4. 아래 환경변수 입력 (Render 가 물어봄):
+   - `BOOTSTRAP_ADMIN` = `doyourself:강한비밀번호` ← 첫 관리자 (users.json 없을 때만 생성)
+   - `GMAIL_ADDRESS` / `GMAIL_APP_PASSWORD` = Gmail 앱 비밀번호 (자동 수집용, 선택)
+5. 배포 완료 → `https://customer-dashboard-xxxx.onrender.com` 접속 → 로그인
+6. **데이터 초기 업로드**: 관리자 로그인 → 관리자 화면 → 📥 데이터 업로드 →
+   로컬 `data/live/inflow.json` · `channels.json` 선택 → 업로드
+   (이후엔 서버가 매일 07:05 자동 수집)
+
+이후 **사용자 추가/삭제, 채널 관리, 지금 수집** 전부 관리자 화면에서 즉시 됩니다.
+
+### 🅱 GitHub Pages (static 모드)
 
 **https://81-th-kim.github.io/customerDashboard/**
+> Settings → Pages → Deploy from branch **main** / folder **/docs**
 
-> Settings → Pages → Source: **Deploy from a branch** / Branch **main** / Folder **/docs**
-
-### 🔐 로그인 (지정 사용자만)
-
-- 접속하면 **로그인 화면**이 먼저 나옵니다. 관리자가 등록한 아이디/비밀번호만 통과.
-- **데이터는 암호화되어(AES-256-GCM) 저장**됩니다 (`docs/data/bundle.enc`).
-  로그인 = 비밀번호로 복호화 키를 풀어 대시보드를 여는 방식.
-  → GitHub에 올라간 파일은 **암호문**이라, 링크를 알아도 로그인 없이는 내용을 볼 수 없습니다.
-- 공개 데모: 아이디 `demo` / 비밀번호 `demo1234` (샘플 데이터)
-
-> 더 강력하게: 저장소를 **Private + GitHub Pro**(Pages 비공개) 로 두거나,
-> **Cloudflare Pages + Access**(무료, 이메일 인증) 앞단에 두면 됩니다. (README 6절)
+- 데이터는 `docs/data/bundle.enc` 로 암호화(AES-256-GCM). 로그인 = 비밀번호로 복호화.
+- 링크를 알아도 로그인 없이는 못 봅니다 (암호문만 공개).
+- 사용자/채널 관리는 관리자 화면에서 편집 후 **GitHub 연결**(PAT) 로 즉시 커밋 (README 4-1).
+- 공개 데모: `demo` / `demo1234` (샘플)
 
 ---
 

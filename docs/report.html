@@ -6,7 +6,7 @@
 <title>제휴현황 리포트</title>
 <script>
   try {
-    if (!sessionStorage.getItem("dash.key")) {
+    if (!window.APP_MODE && !sessionStorage.getItem("dash.key")) {
       var _n = location.pathname.split("/").pop() + location.search;
       location.replace("login.html?next=" + encodeURIComponent(_n || "index.html"));
     }

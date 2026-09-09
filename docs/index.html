@@ -10,7 +10,7 @@
 <script>
   /* 로그인 게이트 — 본문 렌더 전에 미로그인 사용자를 login.html 로 보냄 */
   try {
-    if (!sessionStorage.getItem("dash.key")) {
+    if (!window.APP_MODE && !sessionStorage.getItem("dash.key")) {
       var _n = location.pathname.split("/").pop() + location.search;
       location.replace("login.html?next=" + encodeURIComponent(_n || "index.html"));
     }

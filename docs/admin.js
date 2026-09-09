@@ -16,12 +16,49 @@ function banner(kind, msg, sticky) {
   clearTimeout(bt); if (!sticky) bt = setTimeout(() => (b.className = "banner"), 6000);
 }
 
+const SERVER = window.APP_MODE === "server";
 const me = window.AUTH.currentUser();
 if (me) $("who").textContent = `${me.name}${me.role === "admin" ? " · 관리자" : ""}`;
 $("btn-logout").addEventListener("click", () => window.AUTH.logout());
 
+/* server 모드: GitHub 연결 패널 숨김, 데이터 업로드 패널 표시 */
+if (SERVER) {
+  const p = $("gh-panel"); if (p) p.hidden = true;
+  const pill = $("gh-pill"); if (pill) pill.textContent = "서버 저장 — 변경 즉시 반영";
+  const ip = $("import-panel"); if (ip) ip.hidden = (me && me.role !== "admin");
+}
+
+async function readJsonFile(input) {
+  const f = input.files && input.files[0];
+  if (!f) return null;
+  return JSON.parse(await f.text());
+}
+if ($("imp-run")) $("imp-run").addEventListener("click", async () => {
+  const btn = $("imp-run"); btn.disabled = true; btn.textContent = "업로드 중…";
+  try {
+    const payload = {};
+    const inflow = await readJsonFile($("imp-inflow")); if (inflow) payload.inflow = inflow;
+    const channels = await readJsonFile($("imp-channels")); if (channels) payload.channels = channels;
+    const log = await readJsonFile($("imp-log")); if (log) payload.log = log;
+    if (!Object.keys(payload).length) return banner("warn", "파일을 선택하세요.");
+    const j = await apiPost("api/admin/import", payload);
+    BUNDLE = null;
+    banner("ok", "업로드 완료: " + (j.wrote || []).join(", "));
+    loadChannels();
+  } catch (e) { banner("err", "업로드 실패: " + e.message, true); }
+  finally { btn.disabled = false; btn.textContent = "업로드"; }
+});
+
+async function apiPost(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+  return j;
+}
+
 /* -------- GitHub 연결 -------- */
 async function refreshGh() {
+  if (SERVER) return false;
   const st = $("gh-status"), pill = $("gh-pill");
   if (!window.GH.hasToken()) {
     st.textContent = "미연결"; pill.textContent = "GitHub 미연결 — 저장 시 다운로드만"; return false;
@@ -151,12 +188,15 @@ $("ch-download").addEventListener("click", () => {
 $("ch-save").addEventListener("click", async () => {
   const btn = $("ch-save"); btn.disabled = true; btn.textContent = "저장 중…";
   try {
-    const b = await bundle();
-    const newBundle = { inflow: b.inflow, log: b.log,
-      channels: JSON.parse(channelsJson()) };
-    if (window.GH.hasToken()) {
-      const encStr = await window.AUTH.encryptBundle(newBundle);
-      await window.GH.putFile("docs/data/bundle.enc", encStr, "chore: 채널 설정 변경 (관리자 화면)");
+    if (SERVER) {
+      await apiPost("api/channels", { channels });
+      BUNDLE = null;
+      banner("ok", "저장 완료. 대시보드에 즉시 반영됩니다.");
+    } else if (window.GH.hasToken()) {
+      const b = await bundle();
+      const newBundle = { inflow: b.inflow, log: b.log, channels: JSON.parse(channelsJson()) };
+      await window.GH.putFile("docs/data/bundle.enc", await window.AUTH.encryptBundle(newBundle),
+        "chore: 채널 설정 변경 (관리자 화면)");
       BUNDLE = newBundle;
       banner("ok", "저장 완료. 1~2분 후 사이트에 반영됩니다.");
     } else {
@@ -173,7 +213,15 @@ async function loadUsers() {
     $("u-body").innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--ink-3)">관리자만 사용할 수 있습니다.</td></tr>`;
     return;
   }
-  if (!usersDoc) usersDoc = await fetch("users.json?_=" + Date.now()).then((r) => r.json());
+  if (SERVER) {
+    if ($("u-save")) $("u-save").hidden = true;
+    if ($("u-download")) $("u-download").hidden = true;
+    const j = await fetch("api/admin/users").then((r) => r.json());
+    usersDoc = { users: {} };
+    (j.users || []).forEach((u) => (usersDoc.users[u.id] = { name: u.name, role: u.role }));
+  } else if (!usersDoc) {
+    usersDoc = await fetch("users.json?_=" + Date.now()).then((r) => r.json());
+  }
   renderUsers();
 }
 
@@ -186,13 +234,26 @@ function renderUsers() {
     tr.innerHTML = `<td><code>${esc(uid)}</code></td><td>${esc(u.name || "")}</td>
       <td>${u.role === "admin" ? "관리자" : "조회"}</td>
       <td class="row-actions">${uid === me.id ? "<span style='color:var(--ink-3)'>(본인)</span>"
-        : `<button data-del="${esc(uid)}">제거</button>`}</td>`;
+        : `<button data-del="${esc(uid)}">제거</button>` + (SERVER ? ` <button data-pw="${esc(uid)}">비번변경</button>` : "")}</td>`;
     tb.appendChild(tr);
   });
   tb.querySelectorAll("[data-del]").forEach((btn) =>
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const uid = btn.dataset.del;
-      if (confirm(`'${uid}' 사용자를 제거할까요?`)) { delete usersDoc.users[uid]; renderUsers(); }
+      if (!confirm(`'${uid}' 사용자를 제거할까요?`)) return;
+      if (SERVER) {
+        try { await apiPost("api/admin/users", { action: "remove", id: uid }); await loadUsers(); banner("ok", `'${uid}' 제거됨.`); }
+        catch (e) { banner("err", "제거 실패: " + e.message, true); }
+      } else { delete usersDoc.users[uid]; renderUsers(); }
+    }));
+  tb.querySelectorAll("[data-pw]").forEach((btn) =>
+    btn.addEventListener("click", async () => {
+      const uid = btn.dataset.pw;
+      const pw = prompt(`'${uid}' 의 새 비밀번호 (6자 이상)`);
+      if (!pw) return;
+      if (pw.length < 6) return banner("warn", "6자 이상.");
+      try { await apiPost("api/admin/users", { action: "passwd", id: uid, password: pw }); banner("ok", "변경됨."); }
+      catch (e) { banner("err", "변경 실패: " + e.message, true); }
     }));
 }
 
@@ -202,20 +263,28 @@ $("u-add").addEventListener("click", async () => {
   if (!name) return banner("warn", "이름을 입력하세요.");
   if (pw.length < 6) return banner("warn", "임시 비밀번호는 6자 이상.");
   if (usersDoc.users[id]) return banner("warn", "이미 있는 아이디입니다.");
+  const admin = $("u-admin").checked;
   try {
-    const wrapped = await window.AUTH.wrapForNewUser(pw, usersDoc.iterations);
-    usersDoc.users[id] = { name, role: $("u-admin").checked ? "admin" : "viewer", ...wrapped };
-    $("u-id").value = $("u-name").value = $("u-pw").value = ""; $("u-admin").checked = false;
-    renderUsers();
-    banner("ok", `'${id}' 추가됨. 아래 "저장 및 적용" 을 눌러 반영하세요.`);
+    if (SERVER) {
+      await apiPost("api/admin/users", { action: "add", id, name, password: pw, admin });
+      $("u-id").value = $("u-name").value = $("u-pw").value = ""; $("u-admin").checked = false;
+      await loadUsers();
+      banner("ok", `'${id}' 추가됨. 바로 로그인 가능합니다.`);
+    } else {
+      const wrapped = await window.AUTH.wrapForNewUser(pw, usersDoc.iterations);
+      usersDoc.users[id] = { name, role: admin ? "admin" : "viewer", ...wrapped };
+      $("u-id").value = $("u-name").value = $("u-pw").value = ""; $("u-admin").checked = false;
+      renderUsers();
+      banner("ok", `'${id}' 추가됨. 아래 "저장 및 적용" 을 눌러 반영하세요.`);
+    }
   } catch (e) { banner("err", "추가 실패: " + e.message, true); }
 });
 
-$("u-download").addEventListener("click", () => {
+if ($("u-download")) $("u-download").addEventListener("click", () => {
   download("users.json", JSON.stringify(usersDoc, null, 2));
   banner("ok", "users.json 저장. docs/users.json 에 커밋하면 반영됩니다.");
 });
-$("u-save").addEventListener("click", async () => {
+if ($("u-save")) $("u-save").addEventListener("click", async () => {
   const btn = $("u-save"); btn.disabled = true; btn.textContent = "저장 중…";
   try {
     const text = JSON.stringify(usersDoc, null, 2);
@@ -230,8 +299,23 @@ $("u-save").addEventListener("click", async () => {
   finally { btn.disabled = false; btn.textContent = "저장 및 적용"; }
 });
 
+if (SERVER && me && me.role === "admin" && $("collect-now")) {
+  $("collect-now").hidden = false;
+  $("collect-now").addEventListener("click", async () => {
+    const btn = $("collect-now"); btn.disabled = true; btn.textContent = "수집 중…";
+    try {
+      const j = await apiPost("api/collect", { days: 5 });
+      BUNDLE = null;
+      banner(j.exit_code === 0 ? "ok" : "warn", "수집 완료 (종료코드 " + j.exit_code + ")");
+      loadLogs();
+    } catch (e) { banner("err", "수집 실패: " + e.message, true); }
+    finally { btn.disabled = false; btn.textContent = "지금 수집"; }
+  });
+}
+
 /* -------- logs -------- */
 async function loadLogs() {
+  BUNDLE = SERVER ? null : BUNDLE;
   const d = (await bundle()).log || { logs: [] };
   const logs = (d.logs || []).slice().reverse();
   const badge = (s) => ({

@@ -5,6 +5,7 @@
 (function () {
   "use strict";
 
+  const SERVER = (typeof window !== "undefined" && window.APP_MODE === "server");
   const KEY_SS = "dash.key";     // b64(contentKey 32B)
   const USER_SS = "dash.user";   // {id,name,role}
   const enc = new TextEncoder();
@@ -32,8 +33,21 @@
     return crypto.subtle.importKey("raw", rawBytes, { name: "AES-GCM", length: 256 }, false, ["decrypt", "encrypt"]);
   }
 
-  /* ---- 로그인: users.json + 비밀번호 → contentKey ---- */
+  /* ---- 로그인 ---- */
   async function login(userId, password) {
+    if (SERVER) {
+      const r = await fetch("api/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: userId, password }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || "로그인에 실패했습니다.");
+      try {
+        sessionStorage.setItem(KEY_SS, "server");
+        sessionStorage.setItem(USER_SS, JSON.stringify(j.user));
+      } catch (e) {}
+      return j.user;
+    }
     const users = await fetch("users.json?_=" + Date.now()).then((r) => r.json());
     const u = (users.users || {})[userId];
     if (!u) throw new Error("아이디 또는 비밀번호가 올바르지 않습니다.");
@@ -61,17 +75,24 @@
   }
 
   function currentUser() {
+    if (SERVER && window.__ME) return window.__ME;
     try { return JSON.parse(sessionStorage.getItem(USER_SS) || "null"); } catch (e) { return null; }
   }
   function isLoggedIn() {
+    if (SERVER) return !!window.__ME;
     try { return !!sessionStorage.getItem(KEY_SS); } catch (e) { return false; }
   }
   function logout() {
+    if (SERVER) {
+      fetch("api/logout", { method: "POST" }).finally(() => location.replace("login.html"));
+      return;
+    }
     try { sessionStorage.removeItem(KEY_SS); sessionStorage.removeItem(USER_SS); } catch (e) {}
     location.replace("login.html");
   }
-  /* 보호 페이지 첫 줄에서 호출. 미로그인 → login.html 이동, false 반환 */
+  /* 보호 페이지에서 호출. server 모드는 서버가 이미 게이트했으므로 통과. */
   function requireLogin() {
+    if (SERVER) return !!window.__ME || (location.replace("login.html"), false);
     if (isLoggedIn()) return true;
     const here = location.pathname.split("/").pop() + location.search;
     location.replace("login.html?next=" + encodeURIComponent(here || "index.html"));
@@ -84,8 +105,14 @@
     return importContentKey(b64d(b));
   }
 
-  /* 암호화 번들 로드 → {inflow, channels, log} */
+  /* 데이터 번들 로드 → {inflow, channels, log} */
   async function loadBundle(force) {
+    if (SERVER) {
+      const r = await fetch("api/bundle" + (force ? "?_=" + Date.now() : ""));
+      if (r.status === 401) { location.replace("login.html"); throw new Error("세션 만료"); }
+      if (!r.ok) throw new Error("데이터를 불러오지 못했습니다.");
+      return r.json();
+    }
     const key = await sessionContentKey();
     const blob = await fetch("data/bundle.enc" + (force ? "?_=" + Date.now() : "")).then((r) => {
       if (!r.ok) throw new Error("데이터 파일(bundle.enc)을 찾을 수 없습니다.");

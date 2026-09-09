@@ -17,14 +17,13 @@ from zoneinfo import ZoneInfo
 
 KST = ZoneInfo("Asia/Seoul")
 ROOT = Path(__file__).resolve().parent.parent
-# 로컬 실 데이터 (git 제외). collect.py / import_*.py 가 여기에 기록한다.
-# 공개(GitHub Pages)용 샘플은 docs/data/*.json 에 별도 커밋되어 있고,
-# 실 데이터를 공개하려면 publish.bat 로 명시적으로 복사·푸시한다.
-DATA_DIR = ROOT / "data" / "live"
+# 실 데이터 위치. 로컬은 data/live/ (git 제외), Render 는 영구 디스크(DASH_DATA_DIR).
+DATA_DIR = Path(os.environ.get("DASH_DATA_DIR") or (ROOT / "data" / "live"))
 SAMPLE_DIR = ROOT / "data"        # <name>.sample.json 보관
 INFLOW = DATA_DIR / "inflow.json"
 CHANNELS = DATA_DIR / "channels.json"
 LOG = DATA_DIR / "collection_log.json"
+USERS = DATA_DIR / "users.json"   # 서버 모드 계정 (PBKDF2 해시)
 
 # 비정상적으로 큰 값 판단 임계치 (일 채널 유입건수)
 ABNORMAL_TOTAL = 100_000

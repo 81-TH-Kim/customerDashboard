@@ -5,6 +5,7 @@ secrets/
 # 로컬 전용 - 실 데이터
 # (공개 배포는 publish.bat 로만: data/live -> docs/data)
 data/live/
+data/_srv/
 _local/
 
 # 사내 문서
