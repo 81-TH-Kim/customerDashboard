@@ -35,11 +35,29 @@
   <div class="pagehead">
     <h1>관리자</h1>
     <div class="meta-pills">
-      <span class="pill">정적 사이트 · 설정 변경은 <b>data/channels.json</b> 파일 커밋</span>
+      <span class="pill" id="gh-pill">GitHub 미연결 — 저장 시 다운로드만</span>
     </div>
   </div>
 
   <div id="banner" class="banner"></div>
+
+  <details id="gh-panel" class="panel" style="margin-bottom:16px">
+    <summary style="cursor:pointer;font-weight:700;font-size:13.5px">🔗 GitHub 연결 (화면에서 저장 → 즉시 반영)</summary>
+    <div style="margin-top:12px; display:grid; gap:8px; max-width:520px">
+      <p class="foot" style="text-align:left;margin:0">
+        연결하면 <b>저장 버튼 한 번</b>으로 사이트에 반영됩니다(1~2분). 토큰은 이 브라우저에만 저장되며
+        저장소에 올라가지 않습니다.
+        <br>GitHub → Settings → Developer settings → <b>Fine-grained tokens</b> →
+        <code>customerDashboard</code> 저장소, <b>Contents: Read and write</b>, 만료 짧게.
+      </p>
+      <input type="password" id="gh-token" placeholder="github_pat_..." style="padding:8px 11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
+      <div style="display:flex; gap:8px">
+        <button id="gh-connect" class="primary">연결</button>
+        <button id="gh-disconnect">연결 해제</button>
+        <span id="gh-status" style="align-self:center;font-size:12.5px;color:var(--ink-3)"></span>
+      </div>
+    </div>
+  </details>
 
   <div class="admin-tabs">
     <button data-tab="channels" class="on">제휴채널 관리</button>
@@ -63,11 +81,12 @@
       <input type="text" id="new-code" placeholder="새 채널 code" style="padding:8px 11px;border:1px solid var(--line);border-radius:8px;font:inherit" />
       <button id="ch-add">채널 추가</button>
       <span style="flex:1"></span>
-      <button id="ch-download" class="primary">channels.json 다운로드</button>
+      <button id="ch-save" class="primary">저장 및 적용</button>
+      <button id="ch-download">파일로 저장</button>
     </div>
     <p class="foot" style="text-align:left; margin-top:14px">
-      정적 사이트(GitHub Pages)에서는 서버 저장이 없습니다. 여기서 편집한 뒤
-      <b>channels.json 다운로드</b> → 저장소 <code>docs/data/channels.json</code> 에 커밋하면 반영됩니다.
+      <b>저장 및 적용</b> — GitHub 연결 시 즉시 반영(1~2분). 미연결이면 <b>파일로 저장</b> 후
+      <code>data/live/channels.json</code> 교체 → <code>publish.bat</code>.
       노출='N' 채널은 대시보드/PDF에서 숨겨지지만 수집 데이터는 유지됩니다. 행을 드래그해 순서 변경.
     </p>
   </section>
@@ -89,11 +108,12 @@
       <button id="u-add" class="primary">목록에 추가</button>
     </div>
     <div style="margin-top:16px; display:flex; gap:8px">
-      <button id="u-download" class="primary">users.json 다운로드</button>
+      <button id="u-save" class="primary">저장 및 적용</button>
+      <button id="u-download">파일로 저장</button>
     </div>
     <p class="foot" style="text-align:left; margin-top:14px">
-      정적 사이트에는 서버 저장이 없습니다. 여기서 편집한 뒤 <b>users.json 다운로드</b> →
-      저장소 <code>docs/users.json</code> 에 커밋(또는 <code>publish.bat</code>)하면 반영됩니다.
+      <b>저장 및 적용</b> — GitHub 연결 시 <code>docs/users.json</code> 이 즉시 커밋됩니다(1~2분 반영).
+      미연결이면 <b>파일로 저장</b> 후 저장소에 커밋(또는 <code>publish.bat</code>).
       <br>제거한 사용자의 <b>과거 데이터 접근까지 완전히 차단</b>하려면 로컬에서
       <code>python scripts/manage_users.py rekey</code> 로 키를 교체하세요.
     </p>
@@ -121,6 +141,7 @@
 </div>
 
 <script src="auth.js"></script>
+<script src="github.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

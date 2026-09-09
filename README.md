@@ -132,10 +132,24 @@ python scripts/manage_users.py remove --id lee                         # 제거
 python scripts/manage_users.py list
 python scripts/manage_users.py rekey    # 키 교체(전원 임시비번 재발급) — 완전 차단 시
 ```
-- 브라우저 **관리자 → 사용자 관리** 탭에서도 추가/제거 후 `users.json 다운로드` 가능
-- 변경 후 반드시 `publish.bat` (또는 `docs/users.json` 커밋) 으로 반영
 - **제거(remove)** 는 로그인만 막습니다. 이미 데이터를 받아 본 사람의 접근까지
   끊으려면 **`rekey`** (키 교체 + 데이터 재암호화) 를 실행하세요.
+
+### 4-1. 화면에서 바로 적용 (GitHub 연결)
+
+관리자 화면(로그인 후)에서 **채널/사용자를 편집 → "저장 및 적용" 한 번**으로 사이트에 반영됩니다(1~2분).
+
+1. GitHub → Settings → Developer settings → **Fine-grained tokens** → Generate new token
+   - Repository access: **`customerDashboard` 만**
+   - Permissions: **Contents → Read and write**
+   - Expiration: 짧게 (예: 90일)
+2. 관리자 화면 상단 **🔗 GitHub 연결** 펼치기 → 토큰 붙여넣고 **연결**
+   (토큰은 이 브라우저에만 저장됩니다. 저장소·파일에 절대 올라가지 않음)
+3. 이후 **저장 및 적용** = `docs/users.json` / `docs/data/bundle.enc` 자동 커밋
+4. 미연결이면 **파일로 저장** 버튼으로 다운로드 → 수동 커밋 / `publish.bat`
+
+> 채널 설정은 화면 편집분이 우선됩니다. 로컬 `publish.bat` 는 채널을 덮어쓰지 않습니다
+> (덮어쓰려면 `python scripts/manage_users.py pack --channels-from-live`).
 
 ## 5. 배포
 

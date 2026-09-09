@@ -95,6 +95,14 @@
     return JSON.parse(dec.decode(pt));
   }
 
+  /* 관리자: 현재 세션 키로 번들 재암호화 → bundle.enc 에 넣을 문자열 반환 */
+  async function encryptBundle(obj) {
+    const key = await sessionContentKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(obj)));
+    return JSON.stringify({ iv: b64e(iv), ct: b64e(ct) });
+  }
+
   /* 관리자: 현재 세션 contentKey 를 새 사용자 비번으로 wrap (users.json 항목 생성) */
   async function wrapForNewUser(password, iterations) {
     const raw = b64d(sessionStorage.getItem(KEY_SS));
@@ -106,6 +114,6 @@
 
   window.AUTH = {
     login, logout, requireLogin, isLoggedIn, currentUser,
-    loadBundle, wrapForNewUser,
+    loadBundle, wrapForNewUser, encryptBundle,
   };
 })();

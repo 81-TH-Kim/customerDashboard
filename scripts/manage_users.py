@@ -225,9 +225,22 @@ def cmd_pack(args, key: bytes | None = None):
         stem, ext = name.rsplit(".", 1)
         p = src / f"{stem}{suffix}.{ext}"
         return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
+    # 채널 설정은 관리자 화면에서도 편집되므로, 배포된 bundle.enc 의 것을 유지한다.
+    # (--channels-from-live 를 주면 로컬 data/live/channels.json 로 덮어씀)
+    channels = None
+    if not getattr(args, "channels_from_live", False) and suffix == "" and BUNDLE.exists():
+        try:
+            cur = json.loads(_dec(ck, json.loads(BUNDLE.read_text(encoding="utf-8"))))
+            channels = cur.get("channels")
+        except Exception:
+            channels = None
+    if channels is None:
+        channels = _read("channels.json") or {"channels": []}
+
     bundle = {
         "inflow": _read("inflow.json") or {"records": []},
-        "channels": _read("channels.json") or {"channels": []},
+        "channels": channels,
         "log": _read("collection_log.json") or {"logs": []},
     }
     blob = _enc(ck, json.dumps(bundle, ensure_ascii=False).encode("utf-8"))
@@ -274,6 +287,8 @@ def main() -> int:
     sub.add_parser("list").set_defaults(fn=cmd_list)
     sub.add_parser("rekey").set_defaults(fn=cmd_rekey)
     p = sub.add_parser("pack"); p.add_argument("--from", dest="from_", choices=["live", "sample"], default="live")
+    p.add_argument("--channels-from-live", action="store_true",
+                   help="채널 설정을 data/live/channels.json 로 덮어씀 (기본: 배포본 유지)")
     p.set_defaults(fn=cmd_pack)
 
     p = sub.add_parser("demo")  # 공개 저장소용: 샘플 데이터 + demo/demo1234 계정
