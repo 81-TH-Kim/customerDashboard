@@ -7,28 +7,33 @@ RPA가 매일 보내는 `[RPA]플랫폼 제휴 현황_<날짜>` 메일을 수집
 
 | | GitHub Pages (static) | **Render (server) — 권장** |
 |---|---|---|
-| 인증 | 클라이언트 (데이터 AES-GCM 암호화) | **서버 세션** (비번은 서버에서 PBKDF2 검증) |
-| 데이터 노출 | 암호문이 공개 저장소에 올라감 | 서버에만 존재, 인증 요청에만 응답 |
+| 인증 | 클라이언트 (데이터 AES-GCM 복호화) | **서버 세션** (HMAC 서명 쿠키) |
+| 데이터 노출 | 암호문이 공개 저장소에 올라감 | 인증 요청에만 평문 응답 |
 | 사용자 관리 | 화면 편집 → 파일/토큰 커밋 | **화면에서 추가/삭제 즉시 반영, 즉시 차단** |
 | 데이터 갱신 | 로컬 수집 → `publish.bat` | 서버가 **매일 자동 수집** |
 | 비용 | 무료 | Render Free (15분 무사용 시 슬립) |
 
 같은 코드가 `APP_MODE` 로 두 모드를 지원합니다.
+저장소(`docs/data/bundle.enc` 암호문 + `docs/users.json`)를 **공용 데이터 저장소**로 쓰므로,
+Render Free 에 영구 디스크가 없어도 재배포·재시작 후 데이터가 유지됩니다.
 
 ### 🅰 Render 배포 (server 모드)
 
-1. GitHub 저장소에 이 코드가 올라가 있어야 함
+1. GitHub 저장소에 이 코드가 올라가 있어야 함 (이미 됨)
 2. **Render** (render.com) 가입 → Dashboard → **New → Blueprint**
 3. 이 저장소 연결 → `render.yaml` 자동 인식 → **Apply**
-4. 아래 환경변수 입력 (Render 가 물어봄):
-   - `BOOTSTRAP_ADMIN` = `doyourself:강한비밀번호` ← 첫 관리자 (users.json 없을 때만 생성)
+4. 아래 환경변수 입력 (Render 가 물어봄, `sync: false` 3개):
+   - `DASH_CONTENT_KEY` = 로컬 `.env` 의 `DASH_CONTENT_KEY` 값 그대로 (데이터 복호화 키)
+   - `GH_TOKEN` = Fine-grained PAT (`customerDashboard`, **Contents: Read and write**)
+     — 화면 변경분·자동 수집분을 저장소에 되커밋해 영구 보존
+   - `BOOTSTRAP_ADMIN` = `doyourself:강한비밀번호` (선택 — `users.json` 이 이미 있으면 무시)
    - `GMAIL_ADDRESS` / `GMAIL_APP_PASSWORD` = Gmail 앱 비밀번호 (자동 수집용, 선택)
 5. 배포 완료 → `https://customer-dashboard-xxxx.onrender.com` 접속 → 로그인
-6. **데이터 초기 업로드**: 관리자 로그인 → 관리자 화면 → 📥 데이터 업로드 →
-   로컬 `data/live/inflow.json` · `channels.json` 선택 → 업로드
-   (이후엔 서버가 매일 07:05 자동 수집)
+   - **실 데이터(2026년 1~9월)는 이미 `bundle.enc` 에 들어 있어 별도 업로드가 필요 없습니다.**
+   - 필요 시 관리자 화면 📥 데이터 업로드 로 `data/live/*.json` 을 덮어쓸 수 있습니다.
 
-이후 **사용자 추가/삭제, 채널 관리, 지금 수집** 전부 관리자 화면에서 즉시 됩니다.
+이후 **사용자 추가/삭제, 채널 관리, 지금 수집** 전부 관리자 화면에서 즉시 됩니다
+(변경 시 `GH_TOKEN` 으로 저장소에 자동 커밋).
 
 ### 🅱 GitHub Pages (static 모드)
 

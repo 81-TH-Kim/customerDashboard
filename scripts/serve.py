@@ -8,9 +8,11 @@ Render 배포:    APP_MODE=server python scripts/serve.py --host 0.0.0.0 --port 
   server  : 로그인 세션 + 서버측 데이터 API. 데이터는 서버에만 있고 인증된 요청에만 응답.
 
 server 모드 환경변수
+  DASH_CONTENT_KEY    데이터 번들 복호화 마스터 키 (b64 32B, 필수)
+  GH_TOKEN            변경분을 GitHub 저장소에 되커밋 (Contents R/W, 필수 권장)
   SESSION_SECRET      세션 쿠키 서명 키 (필수 권장)
-  BOOTSTRAP_ADMIN     "id:password" — users.json 없을 때 첫 관리자 생성
-  DASH_DATA_DIR       실 데이터 디렉터리 (Render 영구 디스크)
+  BOOTSTRAP_ADMIN     "id:password" — users.json 없을 때 첫 관리자 생성 (이미 있으면 무시)
+  DASH_DATA_DIR       임시 작업 디렉터리 (기본 /tmp/dash, 재시작 시 GitHub 에서 재구성)
   COLLECT_ON_SERVER   "1" 이면 매일 07:05(KST) 자동 메일 수집
   GMAIL_ADDRESS / GMAIL_APP_PASSWORD   IMAP 수집용
 """
@@ -182,7 +184,9 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"error": "channels 필드 필요"}, 400)
                 store.save_channels({"_comment": store.load_channels().get("_comment", ""),
                                      "channels": body["channels"]})
-                return self._json({"ok": True, "channels": store.load_channels()["channels"]})
+                pushed = A.persist_store("chore: 채널 마스터 변경 (관리자 화면)")
+                return self._json({"ok": True, "pushed": pushed,
+                                   "channels": store.load_channels()["channels"]})
 
             if u.path == "/api/collect":
                 if not self._require(admin=True):
@@ -200,7 +204,8 @@ class Handler(BaseHTTPRequestHandler):
                                          "channels": body["channels"]["channels"]}); wrote.append("channels")
                 if isinstance(body.get("log"), dict) and "logs" in body["log"]:
                     store._write(store.LOG, body["log"]); wrote.append("log")
-                return self._json({"ok": True, "wrote": wrote} if wrote
+                pushed = A.persist_store("chore: 데이터 업로드 (관리자 화면)") if wrote else False
+                return self._json({"ok": True, "wrote": wrote, "pushed": pushed} if wrote
                                   else {"error": "가져올 데이터가 없습니다."}, 200 if wrote else 400)
 
             if u.path == "/api/admin/users":
@@ -249,7 +254,12 @@ class Handler(BaseHTTPRequestHandler):
             code = int(e.code or 0)
         except Exception as e:  # noqa: BLE001
             buf.write(f"\n[예외] {e}")
-        return {"exit_code": code, "output": buf.getvalue(),
+        pushed = False
+        try:
+            pushed = A.persist_store("chore: 자동 수집 데이터 반영")
+        except Exception as e:  # noqa: BLE001
+            buf.write(f"\n[커밋 경고] {e}")
+        return {"exit_code": code, "output": buf.getvalue(), "pushed": pushed,
                 "recent_logs": store.load_log().get("logs", [])[-10:]}
 
     # -------- 정적 파일 -------- #
@@ -291,8 +301,9 @@ def _collector_loop():
                 try:
                     sys.argv = ["collect.py", "--days", "3"]
                     collect.main()
+                    A.persist_store("chore: 매일 자동 수집 반영")
                 except SystemExit:
-                    pass
+                    A.persist_store("chore: 매일 자동 수집 반영")
                 except Exception as e:  # noqa: BLE001
                     print(f"[collector] 오류: {e}", file=sys.stderr)
         except Exception:
@@ -309,6 +320,10 @@ def main() -> int:
 
     if APP_MODE == "server":
         store.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        try:
+            A.hydrate_store()          # GitHub 번들 → 로컬 평문 (analytics/store 용)
+        except Exception as e:  # noqa: BLE001
+            print(f"[시작] 번들 hydrate 실패(계속): {e}", file=sys.stderr)
         A.bootstrap()
         if os.environ.get("COLLECT_ON_SERVER") == "1":
             threading.Thread(target=_collector_loop, daemon=True).start()

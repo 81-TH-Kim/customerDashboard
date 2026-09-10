@@ -9,6 +9,7 @@ openpyxl>=3.1
 cryptography>=42
 
 # 아래는 방식 2(Gmail API + OAuth, collect.py --api) 를 쓸 때만 필요합니다.
-google-api-python-client>=2.100
-google-auth-oauthlib>=1.2
-google-auth>=2.30
+# Render server 배포에는 불필요(IMAP 사용) — 로컬에서 --api 쓸 때만 주석 해제.
+# google-api-python-client>=2.100
+# google-auth-oauthlib>=1.2
+# google-auth>=2.30

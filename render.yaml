@@ -1,5 +1,12 @@
 # Render Blueprint — 제휴현황 대시보드 (서버 모드: 로그인 + 서버측 데이터)
-# 배포: Render 대시보드 → New → Blueprint → 이 저장소 연결 → sync: false 인 값 입력
+#
+# 배포: Render 대시보드 → New → Blueprint → 이 저장소 연결 → Apply
+#       → sync: false 인 값 3개(DASH_CONTENT_KEY, GH_TOKEN, BOOTSTRAP_ADMIN) 입력
+#
+# 저장 방식: Render Free 는 영구 디스크가 없으므로 GitHub 저장소 자체를 데이터 저장소로 쓴다.
+#   - 시작 시   : docs/data/bundle.enc(암호문) 를 GitHub 에서 받아 DASH_CONTENT_KEY 로 복호화
+#   - 변경 시   : 재암호화 후 GH_TOKEN 으로 저장소에 되커밋 → 재시작/재배포에도 유지
+#   실 데이터는 이미 bundle.enc 에 들어있으므로 별도 업로드가 필요 없다.
 services:
   - type: web
     name: customer-dashboard
@@ -17,18 +24,22 @@ services:
       - key: COLLECT_ON_SERVER
         value: "1"
       - key: DASH_DATA_DIR
-        value: /var/data
+        value: /tmp/dash               # 임시 작업 폴더 (재시작 시 GitHub 에서 재구성)
+      - key: GH_REPO
+        value: 81-TH-Kim/customerDashboard
+      - key: GH_BRANCH
+        value: main
       - key: PYTHON_VERSION
         value: "3.12.7"
       - key: SESSION_SECRET
-        generateValue: true          # Render 가 자동 생성
+        generateValue: true            # Render 가 자동 생성 (쿠키 서명)
+      - key: DASH_CONTENT_KEY
+        sync: false                    # 로컬 .env 의 DASH_CONTENT_KEY 값 그대로 (b64 32B)
+      - key: GH_TOKEN
+        sync: false                    # Fine-grained PAT: customerDashboard, Contents=Read/Write
       - key: BOOTSTRAP_ADMIN
-        sync: false                  # 예: doyourself:강한비밀번호   (첫 관리자, users.json 없을 때만)
+        sync: false                    # 예: doyourself:강한비밀번호 (users.json 이 비었을 때만)
       - key: GMAIL_ADDRESS
-        sync: false                  # 매일 자동 수집용 (선택)
+        sync: false                    # 매일 자동 수집용 (선택)
       - key: GMAIL_APP_PASSWORD
-        sync: false                  # Gmail 앱 비밀번호 16자
-    disk:
-      name: dashboard-data
-      mountPath: /var/data           # inflow/channels/log/users.json 이 여기에 저장(영구)
-      sizeGB: 1
+        sync: false                    # Gmail 앱 비밀번호 16자 (선택)
