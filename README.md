@@ -118,11 +118,16 @@ python scripts/collect.py --eml x.eml   # 저장한 .eml 1건
 - 제목에 `플랫폼`/`제휴` 포함된 메일만 수집 (테스트·무관 메일 제외)
 - 중복 방지: 메일 Message-ID + 기준일
 
-**매일 자동** — Windows 작업 스케줄러 `ABL_RPA_제휴현황_수집`(매일 07:30, `run_collect.bat`) 등록됨.
+**매일 자동** — Windows 작업 스케줄러 `ABL_RPA_제휴현황_수집`. 매일 **07:30 · 09:30** 2회
+`run_collect.bat`(→ `collect.py --days 5`) 실행. RPA 메일이 08시 이후 도착하는 날 대비.
 ```powershell
+# 등록 / 스케줄 변경 (07:30·09:30 두 트리거로 재등록)
+powershell -ExecutionPolicy Bypass -File scripts\register_task.ps1
+
 Get-ScheduledTaskInfo ABL_RPA_제휴현황_수집
 Start-ScheduledTask   ABL_RPA_제휴현황_수집
 ```
+> `run_collect.bat` 은 `data\live` 만 갱신합니다. 공개 사이트 반영은 `publish.bat` 을 따로 실행하세요.
 
 ---
 
