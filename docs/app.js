@@ -66,8 +66,18 @@ async function load(force) {
     let v;
     try {
       const d = await fetchData(force);
+      let qStart = state.start, qEnd = state.end;
+      if (state.gran === "day" && !qStart && !qEnd) {
+        // 화면 로딩 기본값: 어제(오늘 -1일). 아직 어제 데이터가 없으면 최신 수집일로.
+        let y = addDays(iso(new Date()), -1);
+        const dd = (d.inflow.records || [])
+          .filter((r) => (r.period || "daily") === "daily").map((r) => r.date).sort();
+        const maxD = dd[dd.length - 1];
+        if (maxD && y > maxD) y = maxD;
+        qStart = qEnd = y;
+      }
       v = window.ANALYTICS.buildView(
-        { granularity: state.gran, start: state.start, end: state.end, channels: state.channels },
+        { granularity: state.gran, start: qStart, end: qEnd, channels: state.channels },
         d,
       );
     } catch (e) {
