@@ -195,8 +195,8 @@ def main() -> int:
                                         replace=args.replace, dry_run=args.dry_run))
 
     else:  # 기본 = IMAP
-        from imap_client import (SUBJECT_MUST_CONTAIN, ImapUnavailable, connect,
-                                 fetch, search_ids)
+        from imap_client import (SUBJECT_PREFIX, ImapUnavailable, connect,
+                                 fetch, search_ids, subject_matches)
         try:
             M = connect()
         except ImapUnavailable as e:
@@ -206,15 +206,14 @@ def main() -> int:
             known = store.known_message_ids()
             uids = search_ids(M, subject=args.subject or "RPA", days=args.days)
             fetched = [fetch(M, u) for u in uids]
-            # 제목 필터: '플랫폼/제휴' 등이 포함된 실 운영 메일만 (--subject 강제 시 건너뜀)
+            # 제목이 '[RPA]플랫폼 제휴 현황' 로 시작하는 실 운영 메일만 (--subject 강제 시 건너뜀)
             if args.subject:
                 matched = fetched
             else:
-                matched = [m for m in fetched
-                           if any(t in m["subject"] for t in SUBJECT_MUST_CONTAIN)]
+                matched = [m for m in fetched if subject_matches(m["subject"])]
                 skipped_subj = len(fetched) - len(matched)
                 if skipped_subj:
-                    print(f"  (제목 불일치로 {skipped_subj}건 제외 — '플랫폼/제휴' 미포함)")
+                    print(f"  (제목 불일치로 {skipped_subj}건 제외 — '{SUBJECT_PREFIX}' 로 시작 안 함)")
             new = [m for m in matched if m["message_id"] not in known]
             print(f"검색 {len(fetched)}건 / 대상 {len(matched)}건 / 신규 {len(new)}건  ({args.days}일 이내)")
             for m in new:

@@ -17,7 +17,7 @@ const charts = {};
 /* ============================== data range helpers */
 const QUICK = {
   day: [
-    ["오늘", (mx) => [mx, mx]],
+    ["오늘", () => { const y = yesterdayClamped(); return [y, y]; }],
     ["어제", (mx) => { const d = new Date(mx); d.setDate(d.getDate() - 1); const s = iso(d); return [s, s]; }],
     ["최근 7일", (mx) => [addDays(mx, -6), mx]],
     ["최근 30일", (mx) => [addDays(mx, -29), mx]],
@@ -47,6 +47,16 @@ function minBucket(v, gran) {
   return gran === "year" ? dmin.slice(0, 4) : gran === "month" ? dmin.slice(0, 7) : dmin;
 }
 
+// 실제 달력 기준 "오늘 -1일". 그 날짜의 일별 데이터가 아직 없으면 가장 최근 수집일로 대체.
+function yesterdayClamped() {
+  let y = addDays(iso(new Date()), -1);
+  const dd = ((DATA && DATA.inflow.records) || [])
+    .filter((r) => (r.period || "daily") === "daily").map((r) => r.date).sort();
+  const maxD = dd[dd.length - 1];
+  if (maxD && y > maxD) y = maxD;
+  return y;
+}
+
 /* ============================== data load (암호화 번들) */
 async function fetchData(force) {
   if (DATA && !force) return DATA;
@@ -65,20 +75,15 @@ async function load(force) {
   try {
     let v;
     try {
-      const d = await fetchData(force);
+      await fetchData(force);
       let qStart = state.start, qEnd = state.end;
       if (state.gran === "day" && !qStart && !qEnd) {
         // 화면 로딩 기본값: 어제(오늘 -1일). 아직 어제 데이터가 없으면 최신 수집일로.
-        let y = addDays(iso(new Date()), -1);
-        const dd = (d.inflow.records || [])
-          .filter((r) => (r.period || "daily") === "daily").map((r) => r.date).sort();
-        const maxD = dd[dd.length - 1];
-        if (maxD && y > maxD) y = maxD;
-        qStart = qEnd = y;
+        qStart = qEnd = yesterdayClamped();
       }
       v = window.ANALYTICS.buildView(
         { granularity: state.gran, start: qStart, end: qEnd, channels: state.channels },
-        d,
+        DATA,
       );
     } catch (e) {
       banner("err", "데이터를 불러오지 못했습니다: " + e.message, true);

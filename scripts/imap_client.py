@@ -71,11 +71,17 @@ def connect() -> imaplib.IMAP4_SSL:
 
 
 # IMAP SUBJECT 검색은 ASCII 만 안전하므로 'RPA' 로 넓게 잡고,
-# 한글 제목 필터(아래 SUBJECT_MUST_CONTAIN)는 Python 쪽에서 처리한다(collect.py).
+# 정확한 제목 판정(아래 SUBJECT_PREFIX)은 Python 쪽에서 처리한다(collect.py).
 IMAP_SUBJECT = "RPA"
-# 실 운영 메일 제목 '[RPA]플랫폼 제휴 현황_...' 에 반드시 들어가는 토큰.
-# 이 중 하나라도 제목에 있어야 수집 대상 (테스트/무관 메일 제외).
+# 실 운영 메일 제목은 반드시 이 문구로 "시작"한다: '[RPA]플랫폼 제휴 현황_2026-09-11' 등.
+# 맨 뒤의 날짜가 데이터 기준일. 이 문구로 시작하지 않는 메일(테스트/무관)은 제외.
+SUBJECT_PREFIX = "[RPA]플랫폼 제휴 현황"
+# 하위 호환용 별칭 (기존 코드에서 참조하던 이름)
 SUBJECT_MUST_CONTAIN = ("플랫폼", "제휴")
+
+
+def subject_matches(subject: str) -> bool:
+    return (subject or "").strip().startswith(SUBJECT_PREFIX)
 
 
 def search_ids(M: imaplib.IMAP4_SSL, *, subject: str = IMAP_SUBJECT, days: int = 7) -> list[bytes]:
@@ -143,8 +149,8 @@ if __name__ == "__main__":
     print(f"연동 정상. 최근 30일 제목에 'RPA' 포함 메일 {len(ids)}건")
     for i in ids[-8:]:
         m = fetch(M, i)
-        ok = any(t in m["subject"] for t in SUBJECT_MUST_CONTAIN)
+        ok = subject_matches(m["subject"])
         kept += ok
         print(f"  [{'수집' if ok else '제외'}] {m['received_at']:%Y-%m-%d %H:%M}  {m['subject']!r}")
-    print(f"→ 수집 대상 {kept}건 (제목에 {'/'.join(SUBJECT_MUST_CONTAIN)} 포함)")
+    print(f"→ 수집 대상 {kept}건 (제목이 '{SUBJECT_PREFIX}' 로 시작)")
     M.logout()
