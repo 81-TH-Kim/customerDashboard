@@ -19,6 +19,13 @@
       "salt": "sTGT1M7d5iNQXuZJiB8BTw==",
       "iv": "G0PTobjFC9VDgwS6",
       "wrapped": "6FtYvh89tyCf3T/5CXHpuqqFe2g7jPj82XzkRdixBrrtApVLKjNP0jQUz/+EmPeg"
+    },
+    "hongsoyoung": {
+      "name": "홍소영",
+      "role": "viewer",
+      "salt": "sDSOn3XoSQiPrX36d1jSYw==",
+      "iv": "OX1YOod6NkUoBfJD",
+      "wrapped": "7fc+y8AXDmvyubs6fgkJTkuSkI59SwlTP5MJR0kWxQY7EdxK4eBOEs4R/Hr7XP87"
     }
   }
 }
