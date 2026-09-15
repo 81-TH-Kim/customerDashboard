@@ -115,11 +115,13 @@ python scripts/collect.py --dry-run
 python scripts/collect.py --eml x.eml   # 저장한 .eml 1건
 ```
 - 기준일 = 제목 끝 날짜(`[RPA]플랫폼 제휴 현황_2026-09-08` → `2026-09-08`), 없으면 수신일−1일 + 경고
-- 제목에 `플랫폼`/`제휴` 포함된 메일만 수집 (테스트·무관 메일 제외)
+- 제목이 `[RPA]플랫폼 제휴 현황` 로 **시작**하는 메일만 수집 (테스트·무관 메일 제외)
 - 중복 방지: 메일 Message-ID + 기준일
 
-**매일 자동** — Windows 작업 스케줄러 `ABL_RPA_제휴현황_수집`. 매일 **07:30 · 09:30** 2회
-`run_collect.bat`(→ `collect.py --days 5`) 실행. RPA 메일이 08시 이후 도착하는 날 대비.
+**매일 자동 (수집 + 발행)** — Windows 작업 스케줄러 `ABL_RPA_제휴현황_수집`. 매일 **07:30 · 09:30** 2회
+`run_collect.bat` 실행 → `collect.py --days 5`(메일 → data/live) → `auto_publish.py`(암호화 →
+GitHub push, **실제 데이터 변경이 있을 때만**). 사람이 `publish.bat` 을 따로 누를 필요가 없다.
+RPA 메일이 08시 이후 도착하는 날 대비해 하루 2번 돈다.
 ```powershell
 # 등록 / 스케줄 변경 (07:30·09:30 두 트리거로 재등록)
 powershell -ExecutionPolicy Bypass -File scripts\register_task.ps1
@@ -127,7 +129,8 @@ powershell -ExecutionPolicy Bypass -File scripts\register_task.ps1
 Get-ScheduledTaskInfo ABL_RPA_제휴현황_수집
 Start-ScheduledTask   ABL_RPA_제휴현황_수집
 ```
-> `run_collect.bat` 은 `data\live` 만 갱신합니다. 공개 사이트 반영은 `publish.bat` 을 따로 실행하세요.
+> `run_collect.bat` 이 수집·발행을 모두 처리합니다. `publish.bat` 은 새 채널 등록 직후처럼
+> **즉시 반영이 필요할 때만 수동으로** 쓰면 됩니다 (다음 07:30/09:30 자동 발행을 기다리지 않아도 됨).
 
 ---
 
