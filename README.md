@@ -132,6 +132,23 @@ Start-ScheduledTask   ABL_RPA_제휴현황_수집
 > `run_collect.bat` 이 수집·발행을 모두 처리합니다. `publish.bat` 은 새 채널 등록 직후처럼
 > **즉시 반영이 필요할 때만 수동으로** 쓰면 됩니다 (다음 07:30/09:30 자동 발행을 기다리지 않아도 됨).
 
+**운영 메모 — 로그인 없이도 실행되도록 전환(2026-09-21)**
+처음엔 작업이 `InteractiveToken`(로그인 상태에서만 실행)으로 등록돼 있어서, PC가 꺼져있거나
+로그인 세션이 없는 동안(예: 주말) 스케줄이 통째로 안 돌아 며칠치 데이터가 밀린 적이 있었다.
+아래 명령으로 계정 비밀번호를 작업 스케줄러 자격증명에 저장해 `Password` 로그온 방식으로
+전환하면, **로그인 화면/잠금 상태에서도** 실행된다 (PC 전원이 켜져 있는 것은 여전히 전제조건).
+```powershell
+schtasks /Change /TN "ABL_RPA_제휴현황_수집" /RU "%USERNAME%" /RP *
+```
+`/RP *` 는 비밀번호를 화면에 노출하지 않고 안전하게 입력받는 옵션이다(대화형 프롬프트에서
+직접 입력). 확인:
+```powershell
+(Get-ScheduledTask -TaskName ABL_RPA_제휴현황_수집).Principal | Select UserId, LogonType
+# LogonType 이 Password 로 나오면 적용된 것
+```
+`register_task.ps1` 로 작업을 다시 등록하면 `InteractiveToken` 으로 되돌아가므로,
+재등록 후에는 위 `schtasks /Change` 를 다시 실행해야 한다.
+
 ---
 
 ## 3. 과거 데이터 적재
