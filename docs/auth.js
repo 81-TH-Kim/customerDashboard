@@ -107,14 +107,16 @@
 
   /* 데이터 번들 로드 → {inflow, channels, log} */
   async function loadBundle(force) {
+    // 매 로드마다 캐시버스팅: GitHub Pages CDN(max-age=600)·브라우저 캐시로
+    // 방금 발행한 데이터가 최대 10분 넘게 옛날 값으로 보이는 걸 방지한다.
     if (SERVER) {
-      const r = await fetch("api/bundle" + (force ? "?_=" + Date.now() : ""));
+      const r = await fetch("api/bundle?_=" + Date.now());
       if (r.status === 401) { location.replace("login.html"); throw new Error("세션 만료"); }
       if (!r.ok) throw new Error("데이터를 불러오지 못했습니다.");
       return r.json();
     }
     const key = await sessionContentKey();
-    const blob = await fetch("data/bundle.enc" + (force ? "?_=" + Date.now() : "")).then((r) => {
+    const blob = await fetch("data/bundle.enc?_=" + Date.now(), { cache: "no-store" }).then((r) => {
       if (!r.ok) throw new Error("데이터 파일(bundle.enc)을 찾을 수 없습니다.");
       return r.json();
     });
