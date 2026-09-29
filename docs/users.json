@@ -9,9 +9,9 @@
     "doyourself": {
       "name": "doyourself",
       "role": "admin",
-      "salt": "D6CQzGEcYARg75aiOZc4GA==",
-      "iv": "Q35q1I++nucodTVx",
-      "wrapped": "rvHksP49kfN/Nkt+aALOS2uHO8Tum5nPaOG5YwJuAC1fTtUPYnCK8sjATuBtl0Aj"
+      "salt": "pgV+O01dDnWmzS13v+kQWg==",
+      "iv": "9LNsqh+MPetxnOVw",
+      "wrapped": "rTz0cOeN6rYaZ30SVdRCr3qWUuNIObaTk4Pvr479lHGErvvLFLZ2fg7f5xjBRS6j"
     },
     "jangcs": {
       "name": "장충식",
