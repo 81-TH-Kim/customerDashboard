@@ -197,6 +197,9 @@ $("ch-save").addEventListener("click", async () => {
       const newBundle = { inflow: b.inflow, log: b.log, channels: JSON.parse(channelsJson()) };
       await window.GH.putFile("docs/data/bundle.enc", await window.AUTH.encryptBundle(newBundle),
         "chore: 채널 설정 변경 (관리자 화면)");
+      // 공개 대시보드(로그인 없음)는 public.json 을 읽으므로 같이 갱신
+      await window.GH.putFile("docs/data/public.json", JSON.stringify(window.AUTH.toPublic(newBundle)) + "\n",
+        "chore: 채널 설정 변경 — 공개 데이터 (관리자 화면)");
       BUNDLE = newBundle;
       banner("ok", "저장 완료. 1~2분 후 사이트에 반영됩니다.");
     } else {

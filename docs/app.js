@@ -60,7 +60,7 @@ function yesterdayClamped() {
 /* ============================== data load (암호화 번들) */
 async function fetchData(force) {
   if (DATA && !force) return DATA;
-  const b = await window.AUTH.loadBundle(force);   // {inflow, channels, log}
+  const b = await window.AUTH.loadDashboardData(force);   // {inflow, channels, log} — 정적 사이트는 공개 public.json
   DATA = { inflow: b.inflow || { records: [] }, channels: b.channels || { channels: [] }, log: b.log || { logs: [] } };
   const codes = (DATA.channels.channels || []).map((c) => c.code);
   const sample = codes.includes("PARTNER_A") || /샘플|가상|sample/i.test(DATA.inflow._comment || "");
@@ -70,7 +70,6 @@ async function fetchData(force) {
 
 /* ============================== load / render */
 async function load(force) {
-  if (!window.AUTH.requireLogin()) return;
   $("loading").hidden = false;
   try {
     let v;
@@ -405,8 +404,12 @@ $("btn-refresh").addEventListener("click", async () => {
 
 $("btn-logout").addEventListener("click", () => window.AUTH.logout());
 (function () {
-  const u = window.AUTH.currentUser();
-  if (u) $("who").textContent = `${u.name}${u.role === "admin" ? " · 관리자" : ""}`;
+  // 대시보드는 로그인 없이 공개. 관리자로 로그인한 경우에만 이름/로그아웃 표시.
+  const u = window.AUTH.isLoggedIn() ? window.AUTH.currentUser() : null;
+  if (u) {
+    $("who").textContent = `${u.name}${u.role === "admin" ? " · 관리자" : ""}`;
+    $("who").hidden = false; $("btn-logout").hidden = false;
+  }
 })();
 
 load();

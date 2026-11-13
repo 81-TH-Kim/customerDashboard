@@ -4,14 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>제휴현황 리포트</title>
-<script>
-  try {
-    if (!window.APP_MODE && !sessionStorage.getItem("dash.key")) {
-      var _n = location.pathname.split("/").pop() + location.search;
-      location.replace("login.html?next=" + encodeURIComponent(_n || "index.html"));
-    }
-  } catch (e) {}
-</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <style>
   :root {
@@ -88,9 +80,8 @@
 const fmt = (n) => (n ?? 0).toLocaleString("ko-KR");
 
 (async function () {
-  if (!window.AUTH.requireLogin()) return;
   const qs = new URLSearchParams(location.search);
-  const bundle = await window.AUTH.loadBundle();
+  const bundle = await window.AUTH.loadDashboardData();
   const v = window.ANALYTICS.buildView({
     granularity: qs.get("granularity") || "day",
     start: qs.get("start") || null,

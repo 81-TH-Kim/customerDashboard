@@ -7,7 +7,8 @@
      IV 가 랜덤이라 같은 데이터를 다시 암호화해도 바이트가 달라지므로, 그냥
      git diff 로는 항상 "변경"으로 보인다 — 실제 내용(레코드/채널/로그)이
      달라졌을 때만 commit + push 한다(빈 발행 방지).
-  3. 변경이 있으면 docs/data/bundle.enc 만 commit + push.
+  3. 변경이 있으면 docs/data/bundle.enc(관리자용 암호문) + docs/data/public.json(공개 대시보드용
+     평문, 건수만) 을 commit + push.
 
 실패해도 로컬 data/live 데이터는 그대로 남으므로, 다음 실행(07:30/09:30) 이나
 수동 publish.bat 으로 다시 시도할 수 있다.
@@ -72,12 +73,20 @@ def main() -> int:
         return 1
     after = _decrypt_bundle(ck)
 
-    if before == after:
+    # 공개용 평문(public.json)은 결정적으로 생성되므로 git 상태로 변경 여부를 본다.
+    r = run(["git", "status", "--porcelain", "--", "docs/data/public.json"])
+    public_changed = bool(r.stdout.strip())
+    bundle_changed = before != after
+
+    if not bundle_changed and not public_changed:
         print("[auto_publish] 내용 변경 없음 — 발행 생략")
         run(["git", "checkout", "--", "docs/data/bundle.enc"])  # 재암호화로 생긴 diff 되돌림
         return 0
+    if not bundle_changed:
+        run(["git", "checkout", "--", "docs/data/bundle.enc"])  # 내용 동일한 재암호화본은 커밋하지 않음
 
-    run(["git", "add", "docs/data/bundle.enc"])
+    files = ["docs/data/public.json"] + (["docs/data/bundle.enc"] if bundle_changed else [])
+    run(["git", "add", *files])
     r = run(["git", "commit", "-m", "chore: 데이터 자동 발행 (RPA 수집 반영, scheduled)"])
     if r.returncode != 0:
         print("[auto_publish] commit 실패 — 발행 중단", file=sys.stderr)

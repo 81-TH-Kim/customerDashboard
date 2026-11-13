@@ -46,6 +46,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ENV = ROOT / ".env"
 USERS = ROOT / "docs" / "users.json"
 BUNDLE = ROOT / "docs" / "data" / "bundle.enc"
+PUBLIC = ROOT / "docs" / "data" / "public.json"   # 로그인 없이 공개되는 대시보드용 평문 데이터
 LIVE = ROOT / "data" / "live"
 ITERATIONS = 600_000
 VERIFY_TEXT = b"customerDashboard-ok"
@@ -214,6 +215,34 @@ def cmd_rekey(args):
     print("→ publish.bat 로 배포")
 
 
+def _public_view(bundle: dict) -> dict:
+    """로그인 없이 공개되는 대시보드 데이터. **화이트리스트 방식** — 일자·채널별 건수와
+    채널 마스터만 내보낸다. 수집 로그/발신 메일주소/메일 제목/Message-ID/경고 등
+    내부 정보(record.source, warnings, log 상세)는 절대 포함하지 않는다."""
+    recs = []
+    for r in (bundle.get("inflow") or {}).get("records", []):
+        pr = {"date": r["date"]}
+        if r.get("period"):
+            pr["period"] = r["period"]
+        pr["channels"] = [
+            {"channel": c["channel"], "y": c["y"], "n": c["n"], "total": c["total"]}
+            for c in r.get("channels", [])
+        ]
+        recs.append(pr)
+    chs = [
+        {k: c.get(k) for k in ("code", "name", "type", "use_yn", "display_yn", "sort")}
+        for c in ((bundle.get("channels") or {}).get("channels", []))
+    ]
+    logs = (bundle.get("log") or {}).get("logs", [])
+    last = logs[-1].get("collected_at") if logs else None
+    return {
+        "schema_version": 1,
+        "inflow": {"records": recs},
+        "channels": {"channels": chs},
+        "log": {"logs": [{"collected_at": last}] if last else []},
+    }
+
+
 def cmd_pack(args, key: bytes | None = None):
     ck = key or _content_key()
     src = LIVE
@@ -246,7 +275,11 @@ def cmd_pack(args, key: bytes | None = None):
     blob = _enc(ck, json.dumps(bundle, ensure_ascii=False).encode("utf-8"))
     BUNDLE.parent.mkdir(parents=True, exist_ok=True)
     BUNDLE.write_text(json.dumps(blob), encoding="utf-8")
-    # 평문 데이터가 docs 에 남아있으면 삭제 (공개 노출 방지)
+    if suffix == "":   # 샘플 데모 팩에서는 공개 데이터를 건드리지 않음
+        PUBLIC.write_text(
+            json.dumps(_public_view(bundle), ensure_ascii=False, separators=(",", ":")) + "\n",
+            encoding="utf-8")
+    # 내부용 평문 데이터가 docs 에 남아있으면 삭제 (공개 노출 방지)
     for n in ("inflow.json", "channels.json", "collection_log.json"):
         p = BUNDLE.parent / n
         if p.exists():

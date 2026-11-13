@@ -40,10 +40,15 @@ Render Free 에 영구 디스크가 없어도 재배포·재시작 후 데이터
 **https://81-th-kim.github.io/customerDashboard/**
 > Settings → Pages → Deploy from branch **main** / folder **/docs**
 
-- 데이터는 `docs/data/bundle.enc` 로 암호화(AES-256-GCM). 로그인 = 비밀번호로 복호화.
-- 링크를 알아도 로그인 없이는 못 봅니다 (암호문만 공개).
+- **접근 정책 (2026-11-13~)**: 대시보드(`index.html`)와 리포트(`report.html`)는 **로그인 없이 누구나** 조회.
+  링크를 아는 인터넷 누구나 볼 수 있다. 관리자 화면(`admin.html`)만 로그인 필요.
+- 공개 데이터 = `docs/data/public.json` (**평문**, 일자·채널별 Y/N/총합 + 채널 마스터 + 최종수집시각).
+  **발신 메일주소·메일 제목·Message-ID·경고·수집 로그 등 내부정보는 포함하지 않는다**
+  (`manage_users.py` 의 `_public_view` 화이트리스트 — 새 필드는 명시적으로 추가해야만 공개됨).
+- 관리자용 전체 데이터(수집 로그 포함)는 기존처럼 `docs/data/bundle.enc` (AES-256-GCM) — 관리자 로그인으로만 복호화.
+- 한 번 올라간 평문은 이후 비공개로 돌려도 git 기록에 남는다.
+- 관리자 화면에서 채널을 저장하면(GitHub 연결 시) `bundle.enc` 와 `public.json` 이 함께 갱신된다.
 - 사용자/채널 관리는 관리자 화면에서 편집 후 **GitHub 연결**(PAT) 로 즉시 커밋 (README 4-1).
-- 공개 데모: `demo` / `demo1234` (샘플)
 
 ---
 

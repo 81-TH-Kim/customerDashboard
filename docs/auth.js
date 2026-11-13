@@ -88,7 +88,7 @@
       return;
     }
     try { sessionStorage.removeItem(KEY_SS); sessionStorage.removeItem(USER_SS); } catch (e) {}
-    location.replace("login.html");
+    location.replace("index.html");   // 대시보드는 공개 — 로그아웃 후엔 대시보드로
   }
   /* 보호 페이지에서 호출. server 모드는 서버가 이미 게이트했으므로 통과. */
   function requireLogin() {
@@ -124,6 +124,35 @@
     return JSON.parse(dec.decode(pt));
   }
 
+  /* 공개 대시보드 데이터 (로그인 불필요). 평문 docs/data/public.json — 일자·채널별 건수와
+     채널 마스터만 담는다(발신 메일주소·제목·수집 로그 등 내부정보 제외). */
+  async function loadPublic() {
+    const r = await fetch("data/public.json?_=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error("공개 데이터(public.json)를 불러오지 못했습니다.");
+    return r.json();
+  }
+  /* 대시보드/리포트 공용 진입점: 정적 사이트는 공개 데이터, 서버 모드는 세션 인증 후 번들 */
+  function loadDashboardData(force) {
+    return SERVER ? loadBundle(force) : loadPublic();
+  }
+  /* 관리자 화면에서 채널을 저장할 때 public.json 도 같이 갱신하기 위한 변환.
+     scripts/manage_users.py 의 _public_view 와 동일한 화이트리스트 규칙. */
+  function toPublic(bundle) {
+    const recs = ((bundle.inflow || {}).records || []).map((r) => {
+      const o = { date: r.date };
+      if (r.period) o.period = r.period;
+      o.channels = (r.channels || []).map((c) => ({ channel: c.channel, y: c.y, n: c.n, total: c.total }));
+      return o;
+    });
+    const chs = (((bundle.channels || {}).channels) || []).map((c) => ({
+      code: c.code, name: c.name, type: c.type, use_yn: c.use_yn, display_yn: c.display_yn, sort: c.sort,
+    }));
+    const logs = (bundle.log || {}).logs || [];
+    const last = logs.length ? logs[logs.length - 1].collected_at : null;
+    return { schema_version: 1, inflow: { records: recs }, channels: { channels: chs },
+      log: { logs: last ? [{ collected_at: last }] : [] } };
+  }
+
   /* 관리자: 현재 세션 키로 번들 재암호화 → bundle.enc 에 넣을 문자열 반환 */
   async function encryptBundle(obj) {
     const key = await sessionContentKey();
@@ -143,6 +172,6 @@
 
   window.AUTH = {
     login, logout, requireLogin, isLoggedIn, currentUser,
-    loadBundle, wrapForNewUser, encryptBundle,
+    loadBundle, loadPublic, loadDashboardData, toPublic, wrapForNewUser, encryptBundle,
   };
 })();
